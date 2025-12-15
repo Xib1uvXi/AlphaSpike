@@ -51,7 +51,7 @@ scan:
 ifndef END_DATE
 	$(error END_DATE is required. Usage: make scan END_DATE=20251212)
 endif
-	poetry run python -m src.alphaspike.cli --end-date $(END_DATE) $(if $(NO_CACHE),--no-cache,)
+	poetry run python -m src.alphaspike.cli --end-date $(END_DATE) $(if $(NO_CACHE),--no-cache,) $(if $(WORKERS),--workers $(WORKERS),)
 
 # Clear all Redis cache keys
 redis-clear:

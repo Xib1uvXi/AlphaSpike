@@ -14,6 +14,7 @@ load_dotenv()
 
 from src.alphaspike.scanner import FEATURES, ScanResult, scan_feature
 from src.alphaspike.cache import get_redis_client
+from src.datahub.daily_bar import batch_load_daily_bars
 from src.datahub.symbol import get_ts_codes
 
 
@@ -97,6 +98,12 @@ def main():
         action="store_true",
         help="Ignore cache and force rescan all features",
     )
+    parser.add_argument(
+        "--workers",
+        type=int,
+        default=6,
+        help="Number of parallel workers (default: 6)",
+    )
     args = parser.parse_args()
 
     # Validate date format
@@ -106,6 +113,7 @@ def main():
 
     console = Console()
     use_cache = not args.no_cache
+    max_workers = args.workers
 
     # Initialize
     redis_client = get_redis_client()
@@ -118,7 +126,18 @@ def main():
     results: list[ScanResult] = []
     start_time = time.time()
 
-    # Scan each feature with progress
+    # Phase 1: Pre-load all market data
+    console.print("[cyan]Loading market data...[/cyan]")
+    load_start = time.time()
+    data_cache = batch_load_daily_bars(ts_codes, end_date=args.end_date)
+    load_elapsed = time.time() - load_start
+    console.print(
+        f"[green]Loaded {len(data_cache):,} symbols[/green] in {format_duration(load_elapsed)} "
+        f"(using {max_workers} workers)"
+    )
+    console.print()
+
+    # Phase 2: Scan each feature with progress
     with Progress(
         SpinnerColumn(),
         TextColumn("[progress.description]{task.description}"),
@@ -130,7 +149,7 @@ def main():
         for feature in FEATURES:
             task_id = progress.add_task(
                 f"[cyan]{feature.name}[/cyan]",
-                total=total_symbols,
+                total=len(data_cache),
             )
 
             def make_progress_callback(tid):
@@ -145,11 +164,13 @@ def main():
                 use_cache=use_cache,
                 redis_client=redis_client,
                 progress_callback=make_progress_callback(task_id),
+                data_cache=data_cache,
+                max_workers=max_workers,
             )
 
             # If from cache, complete immediately
             if result.from_cache:
-                progress.update(task_id, completed=total_symbols, description=f"[yellow]{feature.name}[/yellow] (cached)")
+                progress.update(task_id, completed=len(data_cache), description=f"[yellow]{feature.name}[/yellow] (cached)")
 
             results.append(result)
 

@@ -21,6 +21,24 @@ AlphaSpike includes the following built-in feature detectors:
 | `high_retracement` | High Retracement - Intraday reversal from highs | 1500 days |
 | `consolidation_breakout` | Consolidation Breakout - Volume surge breaking out of tight range | 60 days |
 
+### Detection Criteria
+
+**Volume Upper Shadow (放量上影线)**
+- Upper shadow ratio > 2%
+- Volume surge: 1.2x to 2x of previous day's 10-day MA volume
+- Price quantile < 45% (based on last 200 days)
+- Close > MA5 and Close > MA10
+- MA3 > MA5 (short-term trend confirmation)
+- No limit-up in last 3 days, cumulative gain < 15%
+
+**Volume Stagnation (放量滞涨)**
+- Volume surge: vol > vol_ma10 * 1.5
+- Price stagnation: -3% < daily change < 3%
+- Close > MA10
+- MA3 > MA5 (short-term trend confirmation)
+- At least 3 consecutive days meeting criteria
+- Price quantile 5-45% (based on last 500 days)
+
 All features use TA-Lib indicators (SMA, ATR, ADX, Bollinger Bands, etc.) and return signals detected in the last 3 trading days.
 
 ## Installation
@@ -93,6 +111,9 @@ make scan END_DATE=20251212
 
 # Force rescan (ignore cache)
 make scan END_DATE=20251212 NO_CACHE=1
+
+# Custom worker count (default: 6)
+make scan END_DATE=20251212 WORKERS=4
 ```
 
 Example output:

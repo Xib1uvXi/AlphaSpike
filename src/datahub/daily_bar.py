@@ -257,3 +257,49 @@ def get_date_range(ts_code: str) -> tuple[str | None, str | None]:
         if result and result[0]:
             return result[0], result[1]
         return None, None
+
+
+def batch_load_daily_bars(
+    ts_codes: list[str],
+    end_date: str | None = None,
+) -> dict[str, pd.DataFrame]:
+    """
+    Load daily bar data for multiple symbols in a single batch query.
+
+    This is much faster than loading symbols one by one when you need
+    data for many symbols (e.g., feature scanning).
+
+    Args:
+        ts_codes: List of stock codes to load
+        end_date: Optional end date filter (YYYYMMDD format)
+
+    Returns:
+        Dict mapping ts_code to DataFrame with daily bar data.
+    """
+    # Build query - load all data at once
+    query = "SELECT * FROM daily_bar"
+    params = []
+
+    if end_date:
+        query += " WHERE trade_date <= ?"
+        params.append(end_date)
+
+    query += " ORDER BY ts_code, trade_date"
+
+    # Execute single query
+    with get_connection() as conn:
+        all_data = pd.read_sql_query(query, conn, params=params if params else None)
+
+    if all_data.empty:
+        return {}
+
+    # Convert ts_codes to set for O(1) lookup
+    ts_codes_set = set(ts_codes)
+
+    # Group by ts_code and filter
+    data_cache = {}
+    for ts_code, group in all_data.groupby("ts_code"):
+        if ts_code in ts_codes_set:
+            data_cache[ts_code] = group.reset_index(drop=True)
+
+    return data_cache

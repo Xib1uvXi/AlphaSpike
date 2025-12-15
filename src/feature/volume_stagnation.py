@@ -59,6 +59,8 @@ def volume_stagnation(df: pd.DataFrame, min_consecutive_days: int = 3) -> bool:
     Detection criteria:
         - Volume surge: vol > vol_ma10 * 1.5 (volume > 1.5x 10-day average)
         - Price stagnation: -3% < pct_chg < 3% (daily price change within range)
+        - Price above MA10: close > close_ma10 (price above 10-day moving average)
+        - MA3 > MA5: short-term trend above mid-term trend
         - Consecutive: At least min_consecutive_days meeting both criteria
         - Price quantile: Price at signal end must be in ~5-45% quantile (last 500 days)
         - Scan window: Signal must occur within last 3 trading days
@@ -85,14 +87,25 @@ def volume_stagnation(df: pd.DataFrame, min_consecutive_days: int = 3) -> bool:
     # Calculate 10-day volume moving average
     tmp_df["vol_ma10"] = talib.MA(tmp_df["vol"], timeperiod=10)
 
+    # Calculate price moving averages
+    tmp_df["close_ma3"] = talib.MA(tmp_df["close"], timeperiod=3)
+    tmp_df["close_ma5"] = talib.MA(tmp_df["close"], timeperiod=5)
+    tmp_df["close_ma10"] = talib.MA(tmp_df["close"], timeperiod=10)
+
     # Volume surge condition: vol > vol_ma10 * 1.5
     volume_surge = tmp_df["vol"] > tmp_df["vol_ma10"] * 1.5
 
     # Price stagnation condition: -3% < pct_chg < 3%
     price_stagnation = (tmp_df["pct_chg"] > -3) & (tmp_df["pct_chg"] < 3)
 
-    # Daily signal: both conditions met
-    tmp_df["daily_signal"] = volume_surge & price_stagnation
+    # Price above MA10 condition: close > close_ma10
+    price_above_ma10 = tmp_df["close"] > tmp_df["close_ma10"]
+
+    # MA3 > MA5 condition: short-term trend above mid-term trend
+    ma3_above_ma5 = tmp_df["close_ma3"] > tmp_df["close_ma5"]
+
+    # Daily signal: all conditions met
+    tmp_df["daily_signal"] = volume_surge & price_stagnation & price_above_ma10 & ma3_above_ma5
 
     # Detect consecutive signals
     tmp_df["consecutive_signal"] = _detect_consecutive_signals(tmp_df["daily_signal"], min_consecutive_days)
