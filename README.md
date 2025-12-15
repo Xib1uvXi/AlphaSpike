@@ -20,6 +20,7 @@ AlphaSpike includes the following built-in feature detectors:
 | `volume_stagnation` | Volume Stagnation - High volume but price fails to advance | 550 days |
 | `high_retracement` | High Retracement - Intraday reversal from highs | 1500 days |
 | `consolidation_breakout` | Consolidation Breakout - Volume surge breaking out of tight range | 60 days |
+| `bullish_cannon` | Bullish Cannon - Strong bullish candle + consolidation + breakout | 30 days |
 
 ### Detection Criteria
 
@@ -38,6 +39,25 @@ AlphaSpike includes the following built-in feature detectors:
 - MA3 > MA5 (short-term trend confirmation)
 - At least 3 consecutive days meeting criteria
 - Price quantile 5-45% (based on last 500 days)
+
+**Bullish Cannon (多方炮)**
+
+*First Cannon (day0):*
+- Return >= 7% (strong bullish day)
+- Volume >= vol_ma5 * 1.8 (volume surge)
+- Body/Range >= 40% (solid body, not doji)
+- Upper wick/Range <= 50% (limited upper shadow)
+- Close > HHV(high, 20) (breaks 20-day high)
+
+*Cannon Body (day1 to dayk, k=1..3):*
+- Mean volume <= vol0 * 0.8 (volume contraction)
+- Max amplitude <= 8% (limited volatility)
+- Min low >= open0 (holds above first cannon's open)
+
+*Second Cannon (day(k+1)):*
+- Close > max(high1..k) (breaks body's high)
+- Volume >= mean(vol1..k) * 1.0 (volume at least matches body)
+- (High - Close) / Range <= 25% (closes near high)
 
 All features use TA-Lib indicators (SMA, ATR, ADX, Bollinger Bands, etc.) and return signals detected in the last 3 trading days.
 
@@ -200,6 +220,7 @@ src/
 │   └── trading_calendar.py
 └── feature/             # Signal detection modules
     ├── bbc.py
+    ├── bullish_cannon.py
     ├── volume_upper_shadow.py
     ├── volume_stagnation.py
     ├── high_retracement.py

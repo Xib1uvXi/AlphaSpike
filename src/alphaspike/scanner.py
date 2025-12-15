@@ -12,6 +12,7 @@ from src.alphaspike.cache import get_feature_cache, get_redis_client, set_featur
 from src.datahub.daily_bar import get_daily_bar_from_db
 from src.datahub.symbol import get_ts_codes
 from src.feature.bbc import bbc
+from src.feature.bullish_cannon import bullish_cannon
 from src.feature.consolidation_breakout import consolidation_breakout
 from src.feature.high_retracement import high_retracement
 from src.feature.volume_stagnation import volume_stagnation
@@ -34,6 +35,7 @@ FEATURES: list[FeatureConfig] = [
     FeatureConfig("volume_stagnation", volume_stagnation, 550),
     FeatureConfig("high_retracement", high_retracement, 1500),
     FeatureConfig("consolidation_breakout", consolidation_breakout, 60),
+    FeatureConfig("bullish_cannon", bullish_cannon, 30),
 ]
 
 # Feature name to function mapping for worker processes
@@ -43,6 +45,7 @@ FEATURE_FUNCS: dict[str, Callable[[pd.DataFrame], bool]] = {
     "volume_stagnation": volume_stagnation,
     "high_retracement": high_retracement,
     "consolidation_breakout": consolidation_breakout,
+    "bullish_cannon": bullish_cannon,
 }
 
 

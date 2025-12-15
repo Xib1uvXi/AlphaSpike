@@ -7,13 +7,20 @@ import time
 from dotenv import load_dotenv
 from rich.console import Console
 from rich.panel import Panel
-from rich.progress import BarColumn, Progress, SpinnerColumn, TaskProgressColumn, TextColumn, TimeElapsedColumn
+from rich.progress import (
+    BarColumn,
+    Progress,
+    SpinnerColumn,
+    TaskProgressColumn,
+    TextColumn,
+    TimeElapsedColumn,
+)
 from rich.table import Table
 
 load_dotenv()
 
-from src.alphaspike.scanner import FEATURES, ScanResult, scan_feature
 from src.alphaspike.cache import get_redis_client
+from src.alphaspike.scanner import FEATURES, ScanResult, scan_feature
 from src.datahub.daily_bar import batch_load_daily_bars
 from src.datahub.symbol import get_ts_codes
 
@@ -155,6 +162,7 @@ def main():
             def make_progress_callback(tid):
                 def callback(current: int, _total: int):
                     progress.update(tid, completed=current)
+
                 return callback
 
             result = scan_feature(
@@ -170,7 +178,9 @@ def main():
 
             # If from cache, complete immediately
             if result.from_cache:
-                progress.update(task_id, completed=len(data_cache), description=f"[yellow]{feature.name}[/yellow] (cached)")
+                progress.update(
+                    task_id, completed=len(data_cache), description=f"[yellow]{feature.name}[/yellow] (cached)"
+                )
 
             results.append(result)
 
