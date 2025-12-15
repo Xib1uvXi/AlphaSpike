@@ -1,0 +1,76 @@
+[project]
+name = "alphaspike"
+version = "0.1.0"
+description = "Chinese A-share stock screening system with daily bar sync and technical signal detection"
+authors = [{ name = "Wang Xi", email = "xib1102@icloud.com" }]
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "dotenv (>=0.9.9,<0.10.0)",
+    "pandas (>=2.3.3,<3.0.0)",
+    "tushare (>=1.4.24,<2.0.0)",
+    "xlrd (>=2.0.2,<3.0.0)",
+    "openpyxl (>=3.1.5,<4.0.0)",
+    "pyarrow (>=22.0.0,<23.0.0)",
+    "redis (>=7.1.0,<8.0.0)",
+    "ta-lib (>=0.6.8,<0.7.0)",
+    "rich (>=13.0.0,<14.0.0)",
+]
+
+[tool.poetry]
+packages = [
+    { include = "alphaspike", from = "src" },
+    { include = "datahub", from = "src" },
+    { include = "feature", from = "src" },
+]
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[dependency-groups]
+dev = [
+    "pytest (>=9.0.2,<10.0.0)",
+    "black (>=25.12.0,<26.0.0)",
+    "isort (>=7.0.0,<8.0.0)",
+    "pylint (>=4.0.4,<5.0.0)",
+]
+
+[tool.black]
+line-length = 120
+target-version = ['py310']
+include = '\.pyi?$'
+extend-exclude = ''
+
+[tool.isort]
+profile = "black"
+
+[tool.pylint.BASIC]
+good-names = [
+    "a",
+    "b",
+    "c",
+    "d",
+    "df",
+    "i",
+    "logger",
+    "n",
+    "tz",
+    "id",
+    "x",
+    "y",
+]
+
+[tool.pylint.FORMAT]
+max-line-length = 120
+
+[tool.pylint.MASTER]
+extension-pkg-allow-list = ["talib"]
+
+[tool.pylint.'MESSAGES CONTROL']
+disable = "C,attribute-defined-outside-init,fixme,too-few-public-methods,duplicate-code,logging-fstring-interpolation,too-many-boolean-expressions,too-many-instance-attributes,too-many-arguments,chained-comparison"
+
+[tool.pytest.ini_options]
+filterwarnings = [
+    "ignore:Workbook contains no default style:UserWarning:openpyxl.styles.stylesheet",
+]
