@@ -79,13 +79,21 @@ def display_feature_signals(console: Console, result: ScanResult) -> None:
     if not result.signals:
         return
 
-    # Format stock codes in columns
-    signals_str = ", ".join(result.signals[:20])
-    if len(result.signals) > 20:
-        signals_str += f", ... (+{len(result.signals) - 20} more)"
-
     console.print(f"[bold cyan]{result.feature_name}[/bold cyan] - {len(result.signals)} signals:")
-    console.print(f"  {signals_str}")
+
+    # Show all signals for four_edge, truncate others
+    if result.feature_name == "four_edge":
+        # Display all signals in rows of 10
+        for i in range(0, len(result.signals), 10):
+            row = result.signals[i : i + 10]
+            console.print(f"  {', '.join(row)}")
+    else:
+        # Truncate to 20 for other features
+        signals_str = ", ".join(result.signals[:20])
+        if len(result.signals) > 20:
+            signals_str += f", ... (+{len(result.signals) - 20} more)"
+        console.print(f"  {signals_str}")
+
     console.print()
 
 

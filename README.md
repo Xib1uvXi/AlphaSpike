@@ -21,6 +21,7 @@ AlphaSpike includes the following built-in feature detectors:
 | `high_retracement` | High Retracement - Intraday reversal from highs | 1500 days |
 | `consolidation_breakout` | Consolidation Breakout - Volume surge breaking out of tight range | 60 days |
 | `bullish_cannon` | Bullish Cannon - Strong bullish candle + consolidation + breakout | 30 days |
+| `four_edge` | Four-Edge - ATR volatility + structure pattern filter | 130 days |
 
 ### Detection Criteria
 
@@ -58,6 +59,70 @@ AlphaSpike includes the following built-in feature detectors:
 - Close > max(high1..k) (breaks body's high)
 - Volume >= mean(vol1..k) * 1.0 (volume at least matches body)
 - (High - Close) / Range <= 25% (closes near high)
+
+**Four-Edge (四层过滤)**
+
+Signal logic: Edge1 AND Edge2 AND Edge3 AND Edge4
+
+*Edge 1 - ATR Volatility:*
+- ATR(14) / Close >= 2.5% (sufficient volatility for active trading)
+- Recommended range: 2%–4%
+
+*Edge 2 - Structure Patterns (Type 1 OR Type 2 OR Type 3):*
+
+Type 1 - Compression → Expansion:
+- Box width: (HHV20 - LLV20) / Close <= 18%
+- ATR convergence: ATR14 < SMA(ATR14, 10)
+- MA20 slope: abs(MA20(T)/MA20(T-5) - 1) <= 0.8%
+- Close to MA: abs(Close/MA20 - 1) <= 3%
+
+Type 2 - Trend Pullback:
+- Trend: MA20 > MA60 > MA120
+- Pullback distance: Close/MA20 in [0.97, 1.03]
+- Volume contraction: SMA(Vol,3) < SMA(Vol,10) or Vol < SMA(Vol,5)
+- Support not broken: LLV5 >= MA60 * 0.98
+
+Type 3 - Breakout Retest:
+- Breakout occurred 3-10 days ago: Close(T-k) > HHV20(T-k-1), Vol >= Vol_MA5 * 1.5
+- Retest holds support: LLV3 >= breakout_level * 0.99
+- Volume contraction: SMA(Vol,3) < SMA(Vol,10)
+- Retest end signal: Close > Open or Close > MA5
+
+*Edge 3 - Entry Signals (based on Edge 2 structure type):*
+
+Common definitions:
+- AR (Amount Ratio): Amount(T) / SMA(Amount, 5)(T)
+- CloseStrong: Close >= High - 0.3 * (High - Low)
+- BullishCandle: Close > Open AND CloseStrong AND RealBody/Range >= 0.5
+- VolUp: AR >= 1.3
+- StopDrop: LLV3 >= LLV3_prev (not making new low)
+
+COMPRESS entry:
+- Close > HHV20_prev (breakout)
+- AR >= 1.3 (amount surge)
+- CloseStrong (close in upper 70% of range)
+
+PULLBACK entry:
+- Branch 1: Close > MA20 AND AR >= 1.2
+- Branch 2: StopDrop AND BullishCandle AND VolUp
+
+RETEST entry:
+- HoldBreakout: LLV3 >= breakout_level * 0.99, SMA(Amount,3) < SMA(Amount,10), demand present
+- Close > High_prev (today's close > yesterday's high)
+- AR >= 1.3 (amount surge)
+
+*Edge 4 - Overheated Rejection Filter:*
+
+Rejects signals when stock has risen too fast (overheated):
+- ConsecutiveBullishCandles >= 4 (last 4 days all satisfy BullishCandle)
+- Sum(pct_chg, 4) >= 15% (cumulative return >= 15%)
+
+If BOTH conditions are true → Reject signal
+Otherwise → Pass
+
+BullishCandle (Edge 4 version, simpler):
+- Close > Open
+- Close >= High - 0.3 * (High - Low) (CloseStrong)
 
 All features use TA-Lib indicators (SMA, ATR, ADX, Bollinger Bands, etc.) and return signals detected in the last 3 trading days.
 
