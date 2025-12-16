@@ -182,7 +182,7 @@ def batch_sync_daily_bar(ts_codes: list[str], progress_callback=None) -> dict[st
         try:
             count = sync_daily_bar(ts_code)
             results[ts_code] = count
-        except Exception as e:
+        except Exception:  # pylint: disable=broad-exception-caught
             results[ts_code] = -1  # Indicate error
 
     return results
@@ -212,7 +212,7 @@ def get_daily_bar_from_db(
         cached = get_daily_bar_cache(ts_code, start_date, end_date)
         if cached:
             return pd.read_json(StringIO(cached))
-    except Exception:
+    except Exception:  # pylint: disable=broad-exception-caught
         pass  # Redis unavailable, fall through to database
 
     # Query from database
@@ -235,7 +235,7 @@ def get_daily_bar_from_db(
     # Store in cache
     try:
         set_daily_bar_cache(ts_code, start_date, end_date, df.to_json())
-    except Exception:
+    except Exception:  # pylint: disable=broad-exception-caught
         pass  # Redis unavailable, continue without caching
 
     return df

@@ -21,14 +21,14 @@ def format_duration(seconds: float) -> str:
     """Format duration in adaptive units (hours, minutes, seconds)."""
     if seconds < 60:
         return f"{seconds:.0f}s"
-    elif seconds < 3600:
+    if seconds < 3600:
         minutes = int(seconds // 60)
         secs = int(seconds % 60)
         return f"{minutes}m{secs}s"
-    else:
-        hours = int(seconds // 3600)
-        minutes = int((seconds % 3600) // 60)
-        return f"{hours}h{minutes}m"
+
+    hours = int(seconds // 3600)
+    minutes = int((seconds % 3600) // 60)
+    return f"{hours}h{minutes}m"
 
 
 def parse_args() -> argparse.Namespace:
@@ -41,7 +41,9 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def sync_all_daily_bars(end_date: str | None = None):
+def sync_all_daily_bars(
+    end_date: str | None = None,
+):  # pylint: disable=too-many-locals,too-many-statements,broad-exception-caught
     """Synchronize daily bar data for all stocks."""
     print("Loading all stock symbols...")
     ts_codes = get_ts_codes()
@@ -58,7 +60,7 @@ def sync_all_daily_bars(end_date: str | None = None):
         print(f"Redis connected: {redis_info.get('host', 'localhost')}:{redis_info.get('port', 6379)}")
         already_synced = get_synced_count(client=redis_client)
         print(f"Already synced today: {already_synced}")
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-exception-caught
         print(f"Redis connection failed: {e}")
         redis_client = None
 
@@ -105,7 +107,7 @@ def sync_all_daily_bars(end_date: str | None = None):
             else:
                 print(f"[{i}/{total}] {ts_code}: {status}")
 
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-exception-caught
             error_count += 1
             print(f"[{i}/{total}] {ts_code}: ERROR - {e}")
 

@@ -38,7 +38,7 @@ def _calculate_candle_metrics(df: pd.DataFrame) -> pd.DataFrame:
     return tmp
 
 
-def bullish_cannon(df: pd.DataFrame) -> bool:
+def bullish_cannon(df: pd.DataFrame) -> bool:  # pylint: disable=too-many-locals,too-many-branches
     """
     Feature: Bullish Cannon (多方炮)
 

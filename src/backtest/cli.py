@@ -162,10 +162,10 @@ def main():
             total=total_stocks,
         )
 
-        def progress_callback(current: int, total: int):
+        def progress_callback(current: int, _total: int):
             progress.update(task_id, completed=current)
 
-        stats, results = backtest_year(
+        stats, _ = backtest_year(
             feature_name=args.feature,
             year=args.year,
             holding_days=args.holding_days,

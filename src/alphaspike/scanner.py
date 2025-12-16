@@ -62,7 +62,7 @@ def scan_feature_single(feature: FeatureConfig, df: pd.DataFrame) -> bool:
     """
     try:
         return feature.func(df)
-    except Exception:
+    except Exception:  # pylint: disable=broad-exception-caught
         return False
 
 
@@ -92,7 +92,7 @@ def _scan_symbol_worker(args: tuple) -> tuple[str, bool, str]:
         feature_func = FEATURE_FUNCS[feature_name]
         has_signal = feature_func(df)
         return (ts_code, has_signal, "ok")
-    except Exception:
+    except Exception:  # pylint: disable=broad-exception-caught
         return (ts_code, False, "error")
 
 
@@ -197,7 +197,7 @@ def _scan_feature_sequential(
             if feature.func(df):
                 signals.append(ts_code)
 
-        except Exception:
+        except Exception:  # pylint: disable=broad-exception-caught
             errors += 1
 
         # Progress callback
@@ -218,6 +218,7 @@ def _scan_feature_sequential(
     )
 
 
+# pylint: disable=too-many-locals
 def _scan_feature_parallel(
     feature: FeatureConfig,
     ts_codes: list[str],

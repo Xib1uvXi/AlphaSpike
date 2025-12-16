@@ -30,7 +30,7 @@ def get_redis_client() -> redis.Redis | None:
         client = redis.Redis(host=host, port=port, db=db, password=password, decode_responses=True)
         client.ping()
         return client
-    except Exception:
+    except Exception:  # pylint: disable=broad-exception-caught
         return None
 
 

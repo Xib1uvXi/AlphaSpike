@@ -89,7 +89,7 @@ def display_feature_signals(console: Console, result: ScanResult) -> None:
     console.print()
 
 
-def main():
+def main():  # pylint: disable=too-many-locals
     """Main entry point for CLI."""
     parser = argparse.ArgumentParser(
         description="AlphaSpike Feature Scanner - Scan all symbols for trading signals",

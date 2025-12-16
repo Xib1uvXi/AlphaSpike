@@ -2,7 +2,7 @@
 
 import os
 import time
-from functools import wraps
+from functools import cache, wraps
 
 import pandas as pd
 import tushare as ts
@@ -10,12 +10,20 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-ts.set_token(os.getenv("TUSHARE_TOKEN"))
-
 # Rate limiting: 45 requests per minute = 0.75 requests per second
 # Use 1.4s interval for safety margin (60/45 = 1.33s)
 _RATE_LIMIT_INTERVAL = 1.4  # seconds between requests
-_last_request_time = 0.0
+
+
+@cache
+def _ensure_token() -> None:
+    """Initialize TuShare token once before any API call."""
+
+    token = os.getenv("TUSHARE_TOKEN")
+    if not token:
+        raise RuntimeError("TUSHARE_TOKEN is not set. Please configure it in .env or your environment.")
+
+    ts.set_token(token)
 
 
 def rate_limit(func):
@@ -24,17 +32,18 @@ def rate_limit(func):
 
     Ensures at least 1.4s between consecutive API calls.
     """
+    last_request_time = 0.0
 
     @wraps(func)
     def wrapper(*args, **kwargs):
-        global _last_request_time
+        nonlocal last_request_time
         current_time = time.time()
-        elapsed = current_time - _last_request_time
+        elapsed = current_time - last_request_time
 
         if elapsed < _RATE_LIMIT_INTERVAL:
             time.sleep(_RATE_LIMIT_INTERVAL - elapsed)
 
-        _last_request_time = time.time()
+        last_request_time = time.time()
         return func(*args, **kwargs)
 
     return wrapper
@@ -57,6 +66,7 @@ def get_daily_bar(ts_code: str, start_date: str, end_date: str) -> pd.DataFrame:
     Raises:
         ValueError: If no data found for the given parameters.
     """
+    _ensure_token()
     df = ts.pro_bar(ts_code=ts_code, adj="qfq", start_date=start_date, end_date=end_date)
 
     # Drop any rows with missing fields; API can return sparse frames on partial trading days.

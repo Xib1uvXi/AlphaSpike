@@ -163,7 +163,7 @@ def _backtest_day_worker(args: tuple) -> list[dict]:
                 result = _calculate_future_returns_from_df(full_df, signal_date, holding_days)
                 if result:
                     results.append(result)
-        except Exception:
+        except Exception:  # pylint: disable=broad-exception-caught
             continue
 
     return results
@@ -223,7 +223,7 @@ def _backtest_stock_worker(args: tuple) -> list[dict]:
                     results.append(result)
 
         return results
-    except Exception:
+    except Exception:  # pylint: disable=broad-exception-caught
         return []
 
 
@@ -333,6 +333,7 @@ def _extract_year_trading_days(data_cache: dict[str, pd.DataFrame], year: int) -
     return sorted(all_dates)
 
 
+# pylint: disable=too-many-locals
 def backtest_year(
     feature_name: str,
     year: int,
@@ -438,6 +439,7 @@ def _empty_stats(feature_name: str, year: int, trading_days_count: int) -> Yearl
     )
 
 
+# pylint: disable=too-many-locals
 def _calculate_yearly_stats(
     feature_name: str,
     year: int,
