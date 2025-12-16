@@ -49,6 +49,23 @@ FEATURE_FUNCS: dict[str, Callable[[pd.DataFrame], bool]] = {
 }
 
 
+def scan_feature_single(feature: FeatureConfig, df: pd.DataFrame) -> bool:
+    """
+    Scan a single DataFrame for a feature signal.
+
+    Args:
+        feature: Feature configuration
+        df: Daily bar data DataFrame
+
+    Returns:
+        True if signal detected, False otherwise.
+    """
+    try:
+        return feature.func(df)
+    except Exception:
+        return False
+
+
 def _scan_symbol_worker(args: tuple) -> tuple[str, bool, str]:
     """
     Worker function for parallel scanning.

@@ -158,6 +158,20 @@ Example output:
 Scan completed in 2m 15s | Total signals: 155
 ```
 
+### Backtest Features
+
+Run yearly backtest for a feature signal:
+
+```bash
+make backtest YEAR=2025 FEATURE=bullish_cannon
+
+# Custom holding days (default: 5)
+make backtest YEAR=2025 FEATURE=bullish_cannon HOLDING_DAYS=10
+
+# Custom worker count (default: 6)
+make backtest YEAR=2025 FEATURE=bullish_cannon WORKERS=4
+```
+
 ### Clear Cache
 
 ```bash
@@ -170,6 +184,28 @@ make redis-clear-feature
 # Clear datahub sync cache only
 make redis-clear-datahub
 ```
+
+## Performance & Memory Usage
+
+### Scan
+
+The scan command uses parallel processing with batch data loading for optimal performance:
+
+- **Memory**: ~2-3GB for full market scan (5000+ stocks)
+- **Strategy**: All stock data is loaded into memory in a single database query, then processed in parallel using `ProcessPoolExecutor`
+- **Workers**: Default 6 parallel workers (configurable via `WORKERS` parameter)
+
+### Backtest
+
+The backtest command uses stock-level parallelization:
+
+- **Memory**: ~2-3GB for full year backtest
+- **Strategy**: Batch load all stock data, then process each stock across all trading days in parallel
+- **Data Flow**:
+  1. Single database query loads all daily bar data
+  2. Extract trading days from loaded data (no calendar dependency)
+  3. Parallel process each stock's signals across the year
+  4. Aggregate results and calculate statistics
 
 ## Development
 
@@ -226,7 +262,3 @@ src/
     ├── high_retracement.py
     └── consolidation_breakout.py
 ```
-
-## License
-
-MIT

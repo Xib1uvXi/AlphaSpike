@@ -241,6 +241,43 @@ def get_daily_bar_from_db(
     return df
 
 
+def get_daily_bar_from_db_no_cache(
+    ts_code: str,
+    start_date: str | None = None,
+    end_date: str | None = None,
+) -> pd.DataFrame:
+    """
+    Get daily bar data directly from SQLite database without Redis caching.
+
+    Use this function when Redis caching is not desired (e.g., backtesting).
+
+    Args:
+        ts_code: Stock code (e.g., '000001.SZ')
+        start_date: Start date in YYYYMMDD format (optional)
+        end_date: End date in YYYYMMDD format (optional)
+
+    Returns:
+        DataFrame with daily bar data.
+    """
+    query = "SELECT * FROM daily_bar WHERE ts_code = ?"
+    params = [ts_code]
+
+    if start_date:
+        query += " AND trade_date >= ?"
+        params.append(start_date)
+
+    if end_date:
+        query += " AND trade_date <= ?"
+        params.append(end_date)
+
+    query += " ORDER BY trade_date"
+
+    with get_connection() as conn:
+        df = pd.read_sql_query(query, conn, params=params)
+
+    return df
+
+
 def get_date_range(ts_code: str) -> tuple[str | None, str | None]:
     """
     Get the date range of data available for a stock.

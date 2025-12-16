@@ -1,4 +1,4 @@
-.PHONY: install test lint format sync scan clean help redis-clear redis-clear-feature redis-clear-datahub
+.PHONY: install test lint format sync scan backtest clean help redis-clear redis-clear-feature redis-clear-datahub
 
 # Default target
 help:
@@ -11,6 +11,7 @@ help:
 	@echo "  check                - Check code formatting without changes"
 	@echo "  sync                 - Sync all daily bar data"
 	@echo "  scan                 - Scan all symbols for feature signals (requires END_DATE)"
+	@echo "  backtest             - Run yearly backtest for a feature (requires YEAR, FEATURE)"
 	@echo "  redis-clear          - Clear all Redis cache keys"
 	@echo "  redis-clear-feature  - Clear feature scan cache only"
 	@echo "  redis-clear-datahub  - Clear datahub cache only"
@@ -52,6 +53,16 @@ ifndef END_DATE
 	$(error END_DATE is required. Usage: make scan END_DATE=20251212)
 endif
 	poetry run python -m src.alphaspike.cli --end-date $(END_DATE) $(if $(NO_CACHE),--no-cache,) $(if $(WORKERS),--workers $(WORKERS),)
+
+# Run yearly backtest for a feature
+backtest:
+ifndef YEAR
+	$(error YEAR is required. Usage: make backtest YEAR=2025 FEATURE=bullish_cannon)
+endif
+ifndef FEATURE
+	$(error FEATURE is required. Usage: make backtest YEAR=2025 FEATURE=bullish_cannon)
+endif
+	poetry run python -m src.backtest.cli --year $(YEAR) --feature $(FEATURE) $(if $(HOLDING_DAYS),--holding-days $(HOLDING_DAYS),) $(if $(WORKERS),--workers $(WORKERS),)
 
 # Clear all Redis cache keys
 redis-clear:

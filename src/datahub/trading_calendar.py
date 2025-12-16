@@ -90,3 +90,45 @@ def get_last_trading_day(value: str | date | datetime | None = None) -> str:
         pass
 
     return _last_weekday_before(target).strftime("%Y%m%d")
+
+
+def get_next_n_trading_days(value: str | date | datetime, n: int) -> list[str]:
+    """
+    Get the next N trading days after the given date (exclusive of the given date).
+
+    Args:
+        value: Reference date (YYYYMMDD string, date, or datetime)
+        n: Number of trading days to retrieve
+
+    Returns:
+        List of trading dates in YYYYMMDD format.
+        Returns fewer items if not enough future trading days in calendar.
+    """
+    if n <= 0:
+        return []
+
+    target = _to_date(value)
+    result = []
+
+    try:
+        calendar = _load_calendar()
+        # Get all trading days after the target date
+        after_target = calendar[calendar["trade_date"] > target]
+        trading_days = after_target[after_target["trade_status"] == 1]
+
+        if not trading_days.empty:
+            # Take the first n trading days
+            for _, row in trading_days.head(n).iterrows():
+                result.append(row["trade_date"].strftime("%Y%m%d"))
+            return result
+    except FileNotFoundError:
+        pass
+
+    # Fallback: use weekday logic
+    current = target
+    while len(result) < n:
+        current += timedelta(days=1)
+        if current.weekday() < 5:  # Monday to Friday
+            result.append(current.strftime("%Y%m%d"))
+
+    return result
