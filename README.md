@@ -283,6 +283,9 @@ make test
 # With coverage
 make test-cov
 
+# Performance benchmarks
+make benchmark
+
 # Single test file
 poetry run pytest tests/test_symbol.py -v
 
