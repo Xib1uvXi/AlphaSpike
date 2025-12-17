@@ -350,6 +350,79 @@ def test_serialization_comparison():
 
 
 # ============================================================================
+# Benchmark 4: Price Quantile Vectorization
+# ============================================================================
+
+
+def _calculate_price_quantile_old(close: pd.Series, window: int = 500) -> pd.Series:
+    """Old implementation using pandas rolling apply (slow)."""
+
+    def quantile_rank(x):
+        if len(x) < window:
+            return float("nan")
+        return (x < x.iloc[-1]).mean()
+
+    return close.rolling(window=window, min_periods=window).apply(quantile_rank, raw=False)
+
+
+@pytest.mark.benchmark
+def test_price_quantile_vectorization():
+    """Benchmark: vectorized vs rolling apply for price quantile calculation."""
+    from numpy.lib.stride_tricks import sliding_window_view
+
+    from src.feature.utils import calculate_price_quantile
+
+    print("\n" + "=" * 60)
+    print("Benchmark 4: Price Quantile Vectorization")
+    print("=" * 60)
+
+    # Test with different data sizes and window sizes
+    test_cases = [
+        (500, 200),  # 500 rows, window 200 (volume_upper_shadow)
+        (1000, 500),  # 1000 rows, window 500 (volume_stagnation, high_retracement)
+        (1500, 500),  # 1500 rows, window 500 (high_retracement typical)
+    ]
+
+    for n_rows, window in test_cases:
+        np.random.seed(42)
+        # Create realistic price series with trend and noise
+        base_price = 10.0
+        trend = np.linspace(0, 5, n_rows)
+        noise = np.random.normal(0, 0.5, n_rows)
+        close = pd.Series(base_price + trend + noise)
+
+        # Benchmark old implementation
+        start = time.perf_counter()
+        old_result = _calculate_price_quantile_old(close, window=window)
+        old_time = time.perf_counter() - start
+
+        # Benchmark new vectorized implementation
+        start = time.perf_counter()
+        new_result = calculate_price_quantile(close, window=window)
+        new_time = time.perf_counter() - start
+
+        speedup = old_time / new_time
+
+        print(f"\n{n_rows} rows, window={window}:")
+        print(f"  Old (rolling apply): {old_time*1000:.2f}ms")
+        print(f"  New (vectorized):    {new_time*1000:.2f}ms")
+        print(f"  Speedup:             {speedup:.1f}x faster")
+
+        # Verify results are identical (within floating point tolerance)
+        # Compare only non-NaN values
+        valid_mask = ~np.isnan(old_result) & ~np.isnan(new_result)
+        if valid_mask.sum() > 0:
+            max_diff = np.abs(old_result[valid_mask] - new_result[valid_mask]).max()
+            print(f"  Max difference:      {max_diff:.2e}")
+            assert max_diff < 1e-10, f"Results differ by {max_diff}"
+
+        # Assert new implementation is at least 10x faster
+        assert speedup > 10, f"Expected at least 10x speedup, got {speedup:.1f}x"
+
+    print("\n✓ Price quantile vectorization verified: numpy is significantly faster")
+
+
+# ============================================================================
 # Summary
 # ============================================================================
 
@@ -375,5 +448,9 @@ Summary of verified optimizations:
 3. Pickle Serialization (vs JSON)
    - Expected: 20-30% faster
    - Verified: Pickle is faster for DataFrame serialization
+
+4. Price Quantile Vectorization (numpy vs pandas rolling apply)
+   - Expected: 50-100x faster
+   - Verified: Vectorized implementation is significantly faster
 """
     )

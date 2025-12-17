@@ -14,7 +14,6 @@ from .edge2 import (
     get_edge2_struct_type,
 )
 from .helpers import (
-    calculate_amount_ratio,
     is_bullish_candle,
     is_close_strong,
     is_stop_drop,
@@ -30,7 +29,7 @@ EDGE3_VOLUP_THRESHOLD = _cfg.volup_threshold
 EDGE3_RETEST_SUPPORT_RATIO = _cfg.retest_support_ratio
 
 
-def check_edge3_compress(df: pd.DataFrame) -> pd.Series:
+def check_edge3_compress(df: pd.DataFrame, indicators: dict | None = None) -> pd.Series:
     """
     Edge 3 entry signal for COMPRESS structure.
 
@@ -41,15 +40,23 @@ def check_edge3_compress(df: pd.DataFrame) -> pd.Series:
 
     Args:
         df: DataFrame with OHLCV + amount data
+        indicators: Optional precomputed indicators dict
 
     Returns:
         Boolean Series indicating where entry signal is detected
     """
-    # HHV20_prev: 20-day high as of previous day
-    hhv20_prev = df["high"].rolling(20).max().shift(1)
+    # Use precomputed indicators if available
+    if indicators is not None:
+        hhv20_prev = indicators["hhv20_prev"]
+        amount_ma5 = indicators["amount_ma5"]
+    else:
+        hhv20_prev = df["high"].rolling(20).max().shift(1)
+        amount = df["amount"] if "amount" in df.columns else pd.Series(0, index=df.index)
+        amount_ma5 = amount.rolling(5).mean()
 
     # Amount Ratio
-    ar = calculate_amount_ratio(df)
+    amount = df["amount"] if "amount" in df.columns else pd.Series(0, index=df.index)
+    ar = amount / amount_ma5.replace(0, float("nan"))
 
     # CloseStrong
     close_strong = is_close_strong(df)
@@ -61,7 +68,7 @@ def check_edge3_compress(df: pd.DataFrame) -> pd.Series:
     return cond_breakout & cond_ar & close_strong
 
 
-def check_edge3_pullback(df: pd.DataFrame) -> pd.Series:
+def check_edge3_pullback(df: pd.DataFrame, indicators: dict | None = None) -> pd.Series:
     """
     Edge 3 entry signal for PULLBACK structure.
 
@@ -71,15 +78,23 @@ def check_edge3_pullback(df: pd.DataFrame) -> pd.Series:
 
     Args:
         df: DataFrame with OHLCV + amount data
+        indicators: Optional precomputed indicators dict
 
     Returns:
         Boolean Series indicating where entry signal is detected
     """
-    # MA20
-    ma20 = pd.Series(talib.SMA(df["close"].values, timeperiod=20), index=df.index)
+    # Use precomputed indicators if available
+    if indicators is not None:
+        ma20 = indicators["ma20"]
+        amount_ma5 = indicators["amount_ma5"]
+    else:
+        ma20 = pd.Series(talib.SMA(df["close"].values, timeperiod=20), index=df.index)
+        amount = df["amount"] if "amount" in df.columns else pd.Series(0, index=df.index)
+        amount_ma5 = amount.rolling(5).mean()
 
     # Amount Ratio
-    ar = calculate_amount_ratio(df)
+    amount = df["amount"] if "amount" in df.columns else pd.Series(0, index=df.index)
+    ar = amount / amount_ma5.replace(0, float("nan"))
 
     # Branch 1: Close > MA20 AND AR >= 1.2
     branch1 = (df["close"] > ma20) & (ar >= EDGE3_AR_PULLBACK)
@@ -93,7 +108,7 @@ def check_edge3_pullback(df: pd.DataFrame) -> pd.Series:
     return branch1 | branch2
 
 
-def check_edge3_retest(df: pd.DataFrame) -> pd.Series:  # pylint: disable=too-many-locals
+def check_edge3_retest(df: pd.DataFrame, indicators: dict | None = None) -> pd.Series:  # pylint: disable=too-many-locals
     """
     Edge 3 entry signal for RETEST structure.
 
@@ -109,6 +124,7 @@ def check_edge3_retest(df: pd.DataFrame) -> pd.Series:  # pylint: disable=too-ma
 
     Args:
         df: DataFrame with OHLCV + amount data
+        indicators: Optional precomputed indicators dict
 
     Returns:
         Boolean Series indicating where entry signal is detected
@@ -116,21 +132,24 @@ def check_edge3_retest(df: pd.DataFrame) -> pd.Series:  # pylint: disable=too-ma
     close = df["close"]
     amount = df["amount"] if "amount" in df.columns else pd.Series(0, index=df.index)
 
-    # HHV20_prev: 20-day high as of previous day (breakout level reference)
-    hhv20_prev = df["high"].rolling(20).max().shift(1)
-
-    # LLV3 (lowest low of last 3 days)
-    llv3 = df["low"].rolling(3).min()
-
-    # Amount moving averages for contraction check
-    amount_ma3 = amount.rolling(3).mean()
-    amount_ma10 = amount.rolling(10).mean()
-
-    # MA5 for demand signal
-    ma5 = pd.Series(talib.SMA(close.values, timeperiod=5), index=df.index)
+    # Use precomputed indicators if available
+    if indicators is not None:
+        hhv20_prev = indicators["hhv20_prev"]
+        llv3 = indicators["llv3"]
+        amount_ma3 = indicators["amount_ma3"]
+        amount_ma5 = indicators["amount_ma5"]
+        amount_ma10 = indicators["amount_ma10"]
+        ma5 = indicators["ma5"]
+    else:
+        hhv20_prev = df["high"].rolling(20).max().shift(1)
+        llv3 = df["low"].rolling(3).min()
+        amount_ma3 = amount.rolling(3).mean()
+        amount_ma5 = amount.rolling(5).mean()
+        amount_ma10 = amount.rolling(10).mean()
+        ma5 = pd.Series(talib.SMA(close.values, timeperiod=5), index=df.index)
 
     # Amount Ratio
-    ar = calculate_amount_ratio(df)
+    ar = amount / amount_ma5.replace(0, float("nan"))
 
     # Identify breakout days (close > HHV20_prev)
     # We look back 3-10 days for a valid breakout
@@ -175,7 +194,7 @@ def check_edge3_retest(df: pd.DataFrame) -> pd.Series:  # pylint: disable=too-ma
     return signal
 
 
-def check_edge3(df: pd.DataFrame) -> pd.Series:
+def check_edge3(df: pd.DataFrame, indicators: dict | None = None) -> pd.Series:
     """
     Edge 3: Entry signal based on Edge 2 structure type.
 
@@ -186,17 +205,18 @@ def check_edge3(df: pd.DataFrame) -> pd.Series:
 
     Args:
         df: DataFrame with OHLCV + amount data
+        indicators: Optional precomputed indicators dict
 
     Returns:
         Boolean Series indicating where Edge 3 condition is met
     """
     # Get Edge 2 structure type for each day
-    struct_type = get_edge2_struct_type(df)
+    struct_type = get_edge2_struct_type(df, indicators)
 
     # Calculate Edge 3 conditions for each structure type
-    compress_cond = check_edge3_compress(df)
-    pullback_cond = check_edge3_pullback(df)
-    retest_cond = check_edge3_retest(df)
+    compress_cond = check_edge3_compress(df, indicators)
+    pullback_cond = check_edge3_pullback(df, indicators)
+    retest_cond = check_edge3_retest(df, indicators)
 
     # Apply Edge 3 based on struct type
     edge3 = pd.Series(False, index=df.index)

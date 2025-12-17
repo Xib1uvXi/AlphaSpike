@@ -30,7 +30,7 @@ EDGE2_T3_RETEST_DAYS_MAX = _cfg.t3_retest_days_max
 EDGE2_T3_RETEST_SUPPORT_RATIO = _cfg.t3_retest_support_ratio
 
 
-def check_edge2_type1_compression(df: pd.DataFrame) -> pd.Series:
+def check_edge2_type1_compression(df: pd.DataFrame, indicators: dict | None = None) -> pd.Series:  # pylint: disable=too-many-locals
     """
     Edge 2 Type 1: Compression -> Expansion pattern.
 
@@ -42,27 +42,31 @@ def check_edge2_type1_compression(df: pd.DataFrame) -> pd.Series:
 
     Args:
         df: DataFrame with OHLCV data
+        indicators: Optional precomputed indicators dict
 
     Returns:
         Boolean Series indicating where pattern is detected
     """
-    # MA20
-    ma20 = talib.SMA(df["close"].values, timeperiod=20)
-    ma20_series = pd.Series(ma20, index=df.index)
-
-    # ATR14 and its 10-day moving average
-    atr14 = talib.ATR(
-        df["high"].values,
-        df["low"].values,
-        df["close"].values,
-        timeperiod=14,
-    )
-    atr14_series = pd.Series(atr14, index=df.index)
-    atr14_ma10 = atr14_series.rolling(10).mean()
-
-    # Rolling HHV20 and LLV20
-    high_20 = df["high"].rolling(20).max()
-    low_20 = df["low"].rolling(20).min()
+    # Use precomputed indicators if available
+    if indicators is not None:
+        ma20_series = indicators["ma20"]
+        atr14_series = indicators["atr14"]
+        atr14_ma10 = indicators["atr14_ma10"]
+        high_20 = indicators["hhv20"]
+        low_20 = indicators["llv20"]
+    else:
+        ma20 = talib.SMA(df["close"].values, timeperiod=20)
+        ma20_series = pd.Series(ma20, index=df.index)
+        atr14 = talib.ATR(
+            df["high"].values,
+            df["low"].values,
+            df["close"].values,
+            timeperiod=14,
+        )
+        atr14_series = pd.Series(atr14, index=df.index)
+        atr14_ma10 = atr14_series.rolling(10).mean()
+        high_20 = df["high"].rolling(20).max()
+        low_20 = df["low"].rolling(20).min()
 
     # Condition 1: Box width <= 18%
     box_width = (high_20 - low_20) / df["close"]
@@ -83,7 +87,7 @@ def check_edge2_type1_compression(df: pd.DataFrame) -> pd.Series:
     return cond_box & cond_atr & cond_slope & cond_close_ma
 
 
-def check_edge2_type2_trend_pullback(df: pd.DataFrame) -> pd.Series:
+def check_edge2_type2_trend_pullback(df: pd.DataFrame, indicators: dict | None = None) -> pd.Series:
     """
     Edge 2 Type 2: Trend Pullback pattern.
 
@@ -95,23 +99,31 @@ def check_edge2_type2_trend_pullback(df: pd.DataFrame) -> pd.Series:
 
     Args:
         df: DataFrame with OHLCV data (requires 'vol' column)
+        indicators: Optional precomputed indicators dict
 
     Returns:
         Boolean Series indicating where pattern is detected
     """
-    # Moving averages
-    ma20 = pd.Series(talib.SMA(df["close"].values, timeperiod=20), index=df.index)
-    ma60 = pd.Series(talib.SMA(df["close"].values, timeperiod=60), index=df.index)
-    ma120 = pd.Series(talib.SMA(df["close"].values, timeperiod=120), index=df.index)
+    # Use precomputed indicators if available
+    if indicators is not None:
+        ma20 = indicators["ma20"]
+        ma60 = indicators["ma60"]
+        ma120 = indicators["ma120"]
+        vol_ma3 = indicators["vol_ma3"]
+        vol_ma5 = indicators["vol_ma5"]
+        vol_ma10 = indicators["vol_ma10"]
+        llv5 = indicators["llv5"]
+    else:
+        ma20 = pd.Series(talib.SMA(df["close"].values, timeperiod=20), index=df.index)
+        ma60 = pd.Series(talib.SMA(df["close"].values, timeperiod=60), index=df.index)
+        ma120 = pd.Series(talib.SMA(df["close"].values, timeperiod=120), index=df.index)
+        vol = df["vol"] if "vol" in df.columns else df.get("volume", pd.Series(0, index=df.index))
+        vol_ma3 = vol.rolling(3).mean()
+        vol_ma5 = vol.rolling(5).mean()
+        vol_ma10 = vol.rolling(10).mean()
+        llv5 = df["low"].rolling(5).min()
 
-    # Volume moving averages
     vol = df["vol"] if "vol" in df.columns else df.get("volume", pd.Series(0, index=df.index))
-    vol_ma3 = vol.rolling(3).mean()
-    vol_ma5 = vol.rolling(5).mean()
-    vol_ma10 = vol.rolling(10).mean()
-
-    # LLV5 (lowest low of last 5 days)
-    llv5 = df["low"].rolling(5).min()
 
     # Condition 1: Trend (MA20 > MA60, optionally MA60 > MA120)
     cond_trend = (ma20 > ma60) & (ma60 > ma120)
@@ -130,7 +142,7 @@ def check_edge2_type2_trend_pullback(df: pd.DataFrame) -> pd.Series:
     return cond_trend & cond_pullback & cond_vol & cond_support
 
 
-def check_edge2_type3_breakout_retest(df: pd.DataFrame) -> pd.Series:  # pylint: disable=too-many-locals
+def check_edge2_type3_breakout_retest(df: pd.DataFrame, indicators: dict | None = None) -> pd.Series:  # pylint: disable=too-many-locals
     """
     Edge 2 Type 3: Breakout -> Retest pattern.
 
@@ -146,6 +158,7 @@ def check_edge2_type3_breakout_retest(df: pd.DataFrame) -> pd.Series:  # pylint:
 
     Args:
         df: DataFrame with OHLCV data (requires 'vol' column)
+        indicators: Optional precomputed indicators dict
 
     Returns:
         Boolean Series indicating where pattern is detected
@@ -153,20 +166,29 @@ def check_edge2_type3_breakout_retest(df: pd.DataFrame) -> pd.Series:  # pylint:
     close = df["close"]
     vol = df["vol"] if "vol" in df.columns else df.get("volume", pd.Series(0, index=df.index))
 
-    # HHV20_prev: 20-day high as of previous day
-    hhv20_prev = df["high"].rolling(20).max().shift(1)
-
-    # LLV3 (lowest low of last 3 days)
-    llv3 = df["low"].rolling(3).min()
+    # Use precomputed indicators if available
+    if indicators is not None:
+        hhv20_prev = indicators["hhv20_prev"]
+        llv3 = indicators["llv3"]
+        vol_ma3 = indicators["vol_ma3"]
+        vol_ma5 = indicators["vol_ma5"]
+        vol_ma10 = indicators["vol_ma10"]
+        ma5 = indicators["ma5"]
+    else:
+        hhv20_prev = df["high"].rolling(20).max().shift(1)
+        llv3 = df["low"].rolling(3).min()
+        vol_ma3 = vol.rolling(3).mean()
+        vol_ma5 = vol.rolling(5).mean()
+        vol_ma10 = vol.rolling(10).mean()
+        ma5 = pd.Series(talib.SMA(close.values, timeperiod=5), index=df.index)
 
     # Mark valid breakout days: Close > HHV20_prev AND Vol >= Vol_MA5 * 1.5
-    is_breakout = (close > hhv20_prev) & (vol >= vol.rolling(5).mean() * EDGE2_T3_BREAKOUT_VOL_RATIO)
+    is_breakout = (close > hhv20_prev) & (vol >= vol_ma5 * EDGE2_T3_BREAKOUT_VOL_RATIO)
 
     # Volume contraction during retest
-    vol_contraction = vol.rolling(3).mean() < vol.rolling(10).mean()
+    vol_contraction = vol_ma3 < vol_ma10
 
     # Retest end signal: Close > Open OR Close > MA5
-    ma5 = pd.Series(talib.SMA(close.values, timeperiod=5), index=df.index)
     retest_end = (close > df["open"]) | (close > ma5)
 
     # Check for breakout 3-10 days ago with valid retest
@@ -187,7 +209,7 @@ def check_edge2_type3_breakout_retest(df: pd.DataFrame) -> pd.Series:  # pylint:
     return signal
 
 
-def check_edge2(df: pd.DataFrame) -> pd.Series:
+def check_edge2(df: pd.DataFrame, indicators: dict | None = None) -> pd.Series:
     """
     Edge 2: Structure patterns for 5-day bullish outlook.
 
@@ -198,19 +220,20 @@ def check_edge2(df: pd.DataFrame) -> pd.Series:
 
     Args:
         df: DataFrame with OHLCV data
+        indicators: Optional precomputed indicators dict
 
     Returns:
         Boolean Series (type1 OR type2 OR type3)
     """
-    type1 = check_edge2_type1_compression(df)
-    type2 = check_edge2_type2_trend_pullback(df)
-    type3 = check_edge2_type3_breakout_retest(df)
+    type1 = check_edge2_type1_compression(df, indicators)
+    type2 = check_edge2_type2_trend_pullback(df, indicators)
+    type3 = check_edge2_type3_breakout_retest(df, indicators)
 
     # Type 1 OR Type 2 OR Type 3
     return type1 | type2 | type3
 
 
-def get_edge2_struct_type(df: pd.DataFrame) -> pd.Series:
+def get_edge2_struct_type(df: pd.DataFrame, indicators: dict | None = None) -> pd.Series:
     """
     Get Edge 2 structure type tag for each day.
 
@@ -224,13 +247,14 @@ def get_edge2_struct_type(df: pd.DataFrame) -> pd.Series:
 
     Args:
         df: DataFrame with OHLCV data
+        indicators: Optional precomputed indicators dict
 
     Returns:
         Series with structure tag strings (None if no pattern matches)
     """
-    type1 = check_edge2_type1_compression(df)
-    type2 = check_edge2_type2_trend_pullback(df)
-    type3 = check_edge2_type3_breakout_retest(df)
+    type1 = check_edge2_type1_compression(df, indicators)
+    type2 = check_edge2_type2_trend_pullback(df, indicators)
+    type3 = check_edge2_type3_breakout_retest(df, indicators)
 
     # Initialize with None
     struct_type: pd.Series = pd.Series(None, index=df.index, dtype=object)

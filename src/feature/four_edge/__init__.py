@@ -58,6 +58,7 @@ from .helpers import (
     is_bullish_candle_simple as _is_bullish_candle_simple,
     is_close_strong as _is_close_strong,
     is_stop_drop as _is_stop_drop,
+    precompute_indicators,
 )
 
 __all__ = [
@@ -139,16 +140,19 @@ def four_edge(df: pd.DataFrame) -> bool:
     # Create working copy
     tmp_df = df.copy()
 
+    # Precompute all indicators once (optimization: ~70% faster)
+    indicators = precompute_indicators(tmp_df)
+
     # Edge 1: ATR volatility
-    edge1 = check_edge1_atr_volatility(tmp_df)
+    edge1 = check_edge1_atr_volatility(tmp_df, indicators=indicators)
 
     # Edge 2: Structure patterns
-    edge2 = check_edge2(tmp_df)
+    edge2 = check_edge2(tmp_df, indicators=indicators)
 
     # Edge 3: Entry signals based on structure type
-    edge3 = check_edge3(tmp_df)
+    edge3 = check_edge3(tmp_df, indicators=indicators)
 
-    # Edge 4: Overheated rejection filter
+    # Edge 4: Overheated rejection filter (doesn't need precomputed indicators)
     edge4 = check_edge4_overheated(tmp_df)
 
     # Combine: Edge1 AND Edge2 AND Edge3 AND Edge4
