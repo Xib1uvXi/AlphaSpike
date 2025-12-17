@@ -4,10 +4,13 @@ from datetime import datetime
 
 import pandas as pd
 
+from src.common.logging import get_logger
 from src.datahub.db import get_connection, init_db
 from src.datahub.symbol import load_all_symbols
 from src.datahub.trading_calendar import get_last_trading_day
 from src.datahub.tushare import get_daily_bar
+
+_logger = get_logger(__name__)
 
 
 def _get_symbol_list_date(ts_code: str) -> str | None:
@@ -72,7 +75,7 @@ def _get_today() -> str:
 
 def _save_to_db(df: pd.DataFrame):
     """
-    Save daily bar data to SQLite database.
+    Save daily bar data to SQLite database using batch insert.
 
     Args:
         df: DataFrame with daily bar data from tushare.
@@ -80,29 +83,31 @@ def _save_to_db(df: pd.DataFrame):
     if df.empty:
         return
 
+    # Prepare data as list of tuples for executemany (10-100x faster than iterrows)
+    columns = [
+        "ts_code",
+        "trade_date",
+        "open",
+        "high",
+        "low",
+        "close",
+        "pre_close",
+        "change",
+        "pct_chg",
+        "vol",
+        "amount",
+    ]
+    data = [tuple(row) for row in df[columns].values]
+
     with get_connection() as conn:
-        # Use INSERT OR REPLACE to handle duplicates
-        for _, row in df.iterrows():
-            conn.execute(
-                """
-                INSERT OR REPLACE INTO daily_bar
-                (ts_code, trade_date, open, high, low, close, pre_close, change, pct_chg, vol, amount)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    row["ts_code"],
-                    row["trade_date"],
-                    row["open"],
-                    row["high"],
-                    row["low"],
-                    row["close"],
-                    row["pre_close"],
-                    row["change"],
-                    row["pct_chg"],
-                    row["vol"],
-                    row["amount"],
-                ),
-            )
+        conn.executemany(
+            """
+            INSERT OR REPLACE INTO daily_bar
+            (ts_code, trade_date, open, high, low, close, pre_close, change, pct_chg, vol, amount)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            data,
+        )
 
 
 def sync_daily_bar(ts_code: str, end_date: str | None = None) -> int:
@@ -180,7 +185,8 @@ def batch_sync_daily_bar(ts_codes: list[str], progress_callback=None) -> dict[st
         try:
             count = sync_daily_bar(ts_code)
             results[ts_code] = count
-        except Exception:  # pylint: disable=broad-exception-caught
+        except Exception as e:  # pylint: disable=broad-exception-caught
+            _logger.warning("Failed to sync %s: %s", ts_code, e)
             results[ts_code] = -1  # Indicate error
 
     return results

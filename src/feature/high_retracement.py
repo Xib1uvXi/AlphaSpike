@@ -5,65 +5,13 @@ import warnings
 import pandas as pd
 import talib
 
+from src.feature.utils import (
+    calculate_price_quantile,
+    calculate_upper_shadow_ratio,
+    detect_consecutive_signals,
+)
+
 warnings.filterwarnings("ignore")
-
-
-def _detect_consecutive_signals(signal_series: pd.Series, min_days: int) -> pd.Series:
-    """
-    Detect consecutive True values in a boolean series.
-
-    Uses rolling sum to identify positions where at least min_days
-    consecutive True values occur.
-
-    Args:
-        signal_series: Boolean Series indicating daily signal presence
-        min_days: Minimum consecutive days required
-
-    Returns:
-        pd.Series: Boolean Series marking positions where consecutive requirement is met
-    """
-    signal_int = signal_series.astype(int)
-    rolling_sum = signal_int.rolling(window=min_days, min_periods=min_days).sum()
-    return rolling_sum >= min_days
-
-
-def _calculate_price_quantile(close: pd.Series, window: int = 500) -> pd.Series:
-    """
-    Calculate price quantile based on rolling window.
-
-    Args:
-        close: Close price series
-        window: Lookback window for quantile calculation (default 500 days = ~2 years)
-
-    Returns:
-        pd.Series: Quantile value (0-1) for each day
-    """
-
-    def quantile_rank(x):
-        if len(x) < window:
-            return float("nan")
-        # Returns percentage of values BELOW current price
-        # High price = high quantile (near 1.0), Low price = low quantile (near 0.0)
-        return (x < x.iloc[-1]).mean()
-
-    return close.rolling(window=window, min_periods=window).apply(quantile_rank, raw=False)
-
-
-def _calculate_upper_shadow_ratio(df: pd.DataFrame) -> pd.Series:
-    """
-    Calculate upper shadow ratio for each candle.
-
-    Upper shadow = (high - max(open, close)) / max(open, close)
-
-    Args:
-        df: DataFrame with 'high', 'open', 'close' columns
-
-    Returns:
-        pd.Series: Upper shadow ratio (as percentage)
-    """
-    body_top = df[["open", "close"]].max(axis=1)
-    upper_shadow = (df["high"] - body_top) / body_top * 100
-    return upper_shadow
 
 
 def high_retracement(df: pd.DataFrame, min_consecutive_days: int = 2) -> bool:
@@ -103,21 +51,21 @@ def high_retracement(df: pd.DataFrame, min_consecutive_days: int = 2) -> bool:
     tmp_df["vol_ma20"] = talib.MA(tmp_df["vol"], timeperiod=20)
 
     # Condition 1: Upper shadow ratio > 2%
-    tmp_df["upper_shadow"] = _calculate_upper_shadow_ratio(tmp_df)
+    tmp_df["upper_shadow"] = calculate_upper_shadow_ratio(tmp_df)
     upper_shadow_condition = tmp_df["upper_shadow"] > 2
 
     # Condition 2: Moderate volume (1.0-1.5x of vol_ma20)
     moderate_volume = (tmp_df["vol"] >= tmp_df["vol_ma20"] * 1.0) & (tmp_df["vol"] <= tmp_df["vol_ma20"] * 1.5)
 
     # Condition 3: Price quantile < 55% (based on last 500 days)
-    tmp_df["price_quantile"] = _calculate_price_quantile(tmp_df["close"], window=500)
+    tmp_df["price_quantile"] = calculate_price_quantile(tmp_df["close"], window=500)
     price_in_low_range = tmp_df["price_quantile"] < 0.55
 
     # Daily signal: all conditions met
     tmp_df["daily_signal"] = upper_shadow_condition & moderate_volume & price_in_low_range
 
     # Detect consecutive signals
-    tmp_df["consecutive_signal"] = _detect_consecutive_signals(tmp_df["daily_signal"], min_consecutive_days)
+    tmp_df["consecutive_signal"] = detect_consecutive_signals(tmp_df["daily_signal"], min_consecutive_days)
 
     # Check if signal exists in last 3 trading days
     recent_signals = tmp_df["consecutive_signal"].tail(3)

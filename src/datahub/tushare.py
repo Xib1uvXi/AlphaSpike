@@ -6,13 +6,8 @@ from functools import cache, wraps
 
 import pandas as pd
 import tushare as ts
-from dotenv import load_dotenv
 
-load_dotenv()
-
-# Rate limiting: 45 requests per minute = 0.75 requests per second
-# Use 1.4s interval for safety margin (60/45 = 1.33s)
-_RATE_LIMIT_INTERVAL = 1.4  # seconds between requests
+from src.common.config import TUSHARE_RATE_LIMIT_INTERVAL
 
 
 @cache
@@ -40,8 +35,8 @@ def rate_limit(func):
         current_time = time.time()
         elapsed = current_time - last_request_time
 
-        if elapsed < _RATE_LIMIT_INTERVAL:
-            time.sleep(_RATE_LIMIT_INTERVAL - elapsed)
+        if elapsed < TUSHARE_RATE_LIMIT_INTERVAL:
+            time.sleep(TUSHARE_RATE_LIMIT_INTERVAL - elapsed)
 
         last_request_time = time.time()
         return func(*args, **kwargs)

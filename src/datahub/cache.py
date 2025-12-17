@@ -1,33 +1,10 @@
 """Redis cache module for tracking daily sync status."""
 
-import os
 from datetime import datetime
 
 import redis
-from dotenv import load_dotenv
 
-load_dotenv()
-
-
-def get_redis_client() -> redis.Redis:
-    """
-    Get Redis client from environment configuration.
-
-    Environment variables:
-        REDIS_HOST: Redis host (default: localhost)
-        REDIS_PORT: Redis port (default: 6379)
-        REDIS_DB: Redis database number (default: 0)
-        REDIS_PASSWORD: Redis password (optional)
-
-    Returns:
-        redis.Redis: Redis client instance.
-    """
-    host = os.getenv("REDIS_HOST", "localhost")
-    port = int(os.getenv("REDIS_PORT", "6379"))
-    db = int(os.getenv("REDIS_DB", "0"))
-    password = os.getenv("REDIS_PASSWORD")
-
-    return redis.Redis(host=host, port=port, db=db, password=password, decode_responses=True)
+from src.common.redis import get_redis_client
 
 
 def _get_today() -> str:
@@ -58,10 +35,13 @@ def is_synced_today(ts_code: str, client: redis.Redis | None = None) -> bool:
         client: Optional Redis client. If None, creates a new one.
 
     Returns:
-        True if synced today, False otherwise.
+        True if synced today, False if not synced or Redis unavailable.
     """
     if client is None:
         client = get_redis_client()
+
+    if client is None:
+        return False
 
     key = _get_cache_key(ts_code, _get_today())
     return client.exists(key) > 0
@@ -72,6 +52,7 @@ def mark_synced(ts_code: str, client: redis.Redis | None = None) -> None:
     Mark a stock as synced for today.
 
     The key will expire at midnight (end of today).
+    Silently returns if Redis is unavailable.
 
     Args:
         ts_code: Stock code (e.g., '000001.SZ')
@@ -79,6 +60,9 @@ def mark_synced(ts_code: str, client: redis.Redis | None = None) -> None:
     """
     if client is None:
         client = get_redis_client()
+
+    if client is None:
+        return
 
     key = _get_cache_key(ts_code, _get_today())
     # Set with expiration at end of day (calculate seconds until midnight)
@@ -98,10 +82,13 @@ def clear_sync_cache(date: str | None = None, client: redis.Redis | None = None)
         client: Optional Redis client. If None, creates a new one.
 
     Returns:
-        Number of keys deleted.
+        Number of keys deleted, or 0 if Redis unavailable.
     """
     if client is None:
         client = get_redis_client()
+
+    if client is None:
+        return 0
 
     if date is None:
         date = _get_today()
@@ -123,10 +110,13 @@ def get_synced_count(date: str | None = None, client: redis.Redis | None = None)
         client: Optional Redis client. If None, creates a new one.
 
     Returns:
-        Number of stocks synced.
+        Number of stocks synced, or 0 if Redis unavailable.
     """
     if client is None:
         client = get_redis_client()
+
+    if client is None:
+        return 0
 
     if date is None:
         date = _get_today()

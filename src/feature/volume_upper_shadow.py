@@ -5,44 +5,9 @@ import warnings
 import pandas as pd
 import talib
 
+from src.feature.utils import calculate_price_quantile, calculate_upper_shadow_ratio
+
 warnings.filterwarnings("ignore")
-
-
-def _calculate_upper_shadow_ratio(df: pd.DataFrame) -> pd.Series:
-    """
-    Calculate upper shadow ratio for each candle.
-
-    Upper shadow = (high - max(open, close)) / max(open, close)
-
-    Args:
-        df: DataFrame with 'high', 'open', 'close' columns
-
-    Returns:
-        pd.Series: Upper shadow ratio (as percentage)
-    """
-    body_top = df[["open", "close"]].max(axis=1)
-    upper_shadow = (df["high"] - body_top) / body_top * 100
-    return upper_shadow
-
-
-def _calculate_price_quantile(close: pd.Series, window: int = 200) -> pd.Series:
-    """
-    Calculate price quantile based on rolling window.
-
-    Args:
-        close: Close price series
-        window: Lookback window for quantile calculation (default 200 days)
-
-    Returns:
-        pd.Series: Quantile value (0-1) for each day
-    """
-
-    def quantile_rank(x):
-        if len(x) < window:
-            return float("nan")
-        return (x < x.iloc[-1]).mean()
-
-    return close.rolling(window=window, min_periods=window).apply(quantile_rank, raw=False)
 
 
 def volume_upper_shadow(df: pd.DataFrame) -> bool:
@@ -80,8 +45,8 @@ def volume_upper_shadow(df: pd.DataFrame) -> bool:
     tmp_df["ma5"] = talib.SMA(tmp_df["close"], timeperiod=5)
     tmp_df["ma10"] = talib.SMA(tmp_df["close"], timeperiod=10)
     tmp_df["vol_ma10"] = talib.SMA(tmp_df["vol"], timeperiod=10)
-    tmp_df["upper_shadow"] = _calculate_upper_shadow_ratio(tmp_df)
-    tmp_df["price_quantile"] = _calculate_price_quantile(tmp_df["close"], window=200)
+    tmp_df["upper_shadow"] = calculate_upper_shadow_ratio(tmp_df)
+    tmp_df["price_quantile"] = calculate_price_quantile(tmp_df["close"], window=200)
 
     # Get last row for signal check
     last = tmp_df.iloc[-1]

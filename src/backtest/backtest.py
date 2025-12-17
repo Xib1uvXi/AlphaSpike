@@ -1,35 +1,20 @@
 """Core backtest module for evaluating feature signals."""
 
+import pickle
 from collections.abc import Callable
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from dataclasses import dataclass
 from datetime import date
-from io import StringIO
 
 import pandas as pd
 
-from src.alphaspike.scanner import FEATURES
+from src.common.logging import get_logger
 from src.datahub.daily_bar import batch_load_daily_bars, get_daily_bar_from_db
 from src.datahub.symbol import get_ts_codes
 from src.datahub.trading_calendar import _load_calendar
-from src.feature.bbc import bbc
-from src.feature.bullish_cannon import bullish_cannon
-from src.feature.consolidation_breakout import consolidation_breakout
-from src.feature.four_edge import four_edge
-from src.feature.high_retracement import high_retracement
-from src.feature.volume_stagnation import volume_stagnation
-from src.feature.volume_upper_shadow import volume_upper_shadow
+from src.feature.registry import FEATURE_FUNCS, get_feature_by_name
 
-# Feature name to function mapping for worker processes
-_FEATURE_FUNCS = {
-    "bbc": bbc,
-    "volume_upper_shadow": volume_upper_shadow,
-    "volume_stagnation": volume_stagnation,
-    "high_retracement": high_retracement,
-    "consolidation_breakout": consolidation_breakout,
-    "bullish_cannon": bullish_cannon,
-    "four_edge": four_edge,
-}
+_logger = get_logger(__name__)
 
 
 @dataclass
@@ -147,7 +132,7 @@ def _backtest_day_worker(args: tuple) -> list[dict]:
     """
     signal_date, ts_codes, feature_name, min_days, holding_days = args
 
-    feature_func = _FEATURE_FUNCS.get(feature_name)
+    feature_func = FEATURE_FUNCS.get(feature_name)
     if feature_func is None:
         return []
 
@@ -180,25 +165,22 @@ def _backtest_stock_worker(args: tuple) -> list[dict]:
     - All signal checks happen in memory
 
     Args:
-        args: (ts_code, df_json, trading_days, feature_name, min_days, holding_days)
+        args: (ts_code, df_bytes, trading_days, feature_name, min_days, holding_days)
 
     Returns:
         List of result dicts for all signals found for this stock.
     """
-    _ts_code, df_json, trading_days, feature_name, min_days, holding_days = args
+    _ts_code, df_bytes, trading_days, feature_name, min_days, holding_days = args
 
-    feature_func = _FEATURE_FUNCS.get(feature_name)
+    feature_func = FEATURE_FUNCS.get(feature_name)
     if feature_func is None:
         return []
 
     try:
-        # Reconstruct DataFrame from JSON (only once per stock)
-        df = pd.read_json(StringIO(df_json))
+        # Reconstruct DataFrame from pickle (faster than JSON)
+        df = pickle.loads(df_bytes)
         if len(df) < min_days:
             return []
-
-        # Restore trade_date to string format (JSON converts to int)
-        df["trade_date"] = df["trade_date"].astype(str)
 
         # Ensure sorted by trade_date
         df = df.sort_values("trade_date").reset_index(drop=True)
@@ -245,7 +227,7 @@ def backtest_feature(
     Returns:
         List of BacktestResult for all stocks with signals.
     """
-    feature_config = _get_feature_config(feature_name)
+    feature_config = get_feature_by_name(feature_name)
     if feature_config is None:
         return []
 
@@ -253,14 +235,6 @@ def backtest_feature(
     results = _backtest_day_worker((signal_date, ts_codes, feature_name, feature_config.min_days, holding_days))
 
     return [BacktestResult(**r) for r in results]
-
-
-def _get_feature_config(feature_name: str):
-    """Get feature config by name."""
-    for f in FEATURES:
-        if f.name == feature_name:
-            return f
-    return None
 
 
 @dataclass
@@ -361,7 +335,7 @@ def backtest_year(
     Returns:
         Tuple of (YearlyBacktestStats, list of all BacktestResult)
     """
-    feature_config = _get_feature_config(feature_name)
+    feature_config = get_feature_by_name(feature_name)
     if feature_config is None:
         return _empty_stats(feature_name, year, 0), []
 
@@ -386,7 +360,7 @@ def backtest_year(
             work_items.append(
                 (
                     ts_code,
-                    df.to_json(),
+                    pickle.dumps(df),
                     trading_days,
                     feature_name,
                     feature_config.min_days,

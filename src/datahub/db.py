@@ -28,9 +28,11 @@ CREATE TABLE IF NOT EXISTS daily_bar (
 )
 """
 
-# Index for faster queries
-DAILY_BAR_INDEX = """
-CREATE INDEX IF NOT EXISTS idx_daily_bar_ts_code ON daily_bar (ts_code)
+# Indexes for faster queries
+# Note: PRIMARY KEY (ts_code, trade_date) creates implicit compound index for ts_code-first queries
+# This additional index optimizes date-range queries like "WHERE trade_date <= ?"
+DAILY_BAR_INDEX_TRADE_DATE = """
+CREATE INDEX IF NOT EXISTS idx_daily_bar_trade_date ON daily_bar (trade_date, ts_code)
 """
 
 
@@ -84,7 +86,7 @@ def init_db():
     """
     with get_connection() as conn:
         conn.execute(DAILY_BAR_SCHEMA)
-        conn.execute(DAILY_BAR_INDEX)
+        conn.execute(DAILY_BAR_INDEX_TRADE_DATE)
 
 
 def drop_daily_bar_table():

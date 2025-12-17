@@ -1,37 +1,14 @@
 """Feature result caching module."""
 
 import json
-import os
 
 import redis
-from dotenv import load_dotenv
 
-load_dotenv()
+from src.common.config import FEATURE_CACHE_TTL_SECONDS
+from src.common.redis import get_redis_client
 
-
-def get_redis_client() -> redis.Redis | None:
-    """
-    Get Redis client, return None if unavailable.
-
-    Environment variables:
-        REDIS_HOST: Redis host (default: localhost)
-        REDIS_PORT: Redis port (default: 6379)
-        REDIS_DB: Redis database number (default: 0)
-        REDIS_PASSWORD: Redis password (optional)
-
-    Returns:
-        redis.Redis or None if connection fails.
-    """
-    try:
-        host = os.getenv("REDIS_HOST", "localhost")
-        port = int(os.getenv("REDIS_PORT", "6379"))
-        db = int(os.getenv("REDIS_DB", "0"))
-        password = os.getenv("REDIS_PASSWORD")
-        client = redis.Redis(host=host, port=port, db=db, password=password, decode_responses=True)
-        client.ping()
-        return client
-    except Exception:  # pylint: disable=broad-exception-caught
-        return None
+# Re-export for backward compatibility
+__all__ = ["get_redis_client", "get_feature_cache", "set_feature_cache"]
 
 
 def _get_feature_cache_key(feature_name: str, date: str) -> str:
@@ -65,10 +42,6 @@ def get_feature_cache(feature_name: str, date: str, client: redis.Redis) -> list
     if cached:
         return json.loads(cached)
     return None
-
-
-FEATURE_CACHE_TTL_DAYS = 14
-FEATURE_CACHE_TTL_SECONDS = FEATURE_CACHE_TTL_DAYS * 24 * 60 * 60
 
 
 def set_feature_cache(feature_name: str, date: str, ts_codes: list[str], client: redis.Redis) -> None:

@@ -1,55 +1,20 @@
 """Feature scanner module."""
 
+import pickle
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from dataclasses import dataclass
-from io import StringIO
 from typing import Callable
 
 import pandas as pd
 import redis
 
 from src.alphaspike.cache import get_feature_cache, get_redis_client, set_feature_cache
+from src.common.logging import get_logger
 from src.datahub.daily_bar import get_daily_bar_from_db
 from src.datahub.symbol import get_ts_codes
-from src.feature.bbc import bbc
-from src.feature.bullish_cannon import bullish_cannon
-from src.feature.consolidation_breakout import consolidation_breakout
-from src.feature.four_edge import four_edge
-from src.feature.high_retracement import high_retracement
-from src.feature.volume_stagnation import volume_stagnation
-from src.feature.volume_upper_shadow import volume_upper_shadow
+from src.feature.registry import FEATURE_FUNCS, FEATURES, FeatureConfig
 
-
-@dataclass
-class FeatureConfig:
-    """Configuration for a feature."""
-
-    name: str  # Feature name (used as cache key and display)
-    func: Callable[[pd.DataFrame], bool]  # Feature function
-    min_days: int  # Minimum data days required
-
-
-# Feature registry
-FEATURES: list[FeatureConfig] = [
-    FeatureConfig("bbc", bbc, 1000),
-    FeatureConfig("volume_upper_shadow", volume_upper_shadow, 220),
-    FeatureConfig("volume_stagnation", volume_stagnation, 550),
-    FeatureConfig("high_retracement", high_retracement, 1500),
-    FeatureConfig("consolidation_breakout", consolidation_breakout, 60),
-    FeatureConfig("bullish_cannon", bullish_cannon, 30),
-    FeatureConfig("four_edge", four_edge, 130),
-]
-
-# Feature name to function mapping for worker processes
-FEATURE_FUNCS: dict[str, Callable[[pd.DataFrame], bool]] = {
-    "bbc": bbc,
-    "volume_upper_shadow": volume_upper_shadow,
-    "volume_stagnation": volume_stagnation,
-    "high_retracement": high_retracement,
-    "consolidation_breakout": consolidation_breakout,
-    "bullish_cannon": bullish_cannon,
-    "four_edge": four_edge,
-}
+_logger = get_logger(__name__)
 
 
 def scan_feature_single(feature: FeatureConfig, df: pd.DataFrame) -> bool:
@@ -65,7 +30,8 @@ def scan_feature_single(feature: FeatureConfig, df: pd.DataFrame) -> bool:
     """
     try:
         return feature.func(df)
-    except Exception:  # pylint: disable=broad-exception-caught
+    except Exception as e:  # pylint: disable=broad-exception-caught
+        _logger.debug("Feature %s scan failed: %s", feature.name, e)
         return False
 
 
@@ -76,16 +42,16 @@ def _scan_symbol_worker(args: tuple) -> tuple[str, bool, str]:
     Must be defined at module level to be picklable for ProcessPoolExecutor.
 
     Args:
-        args: (ts_code, df_json, feature_name, min_days)
+        args: (ts_code, df_bytes, feature_name, min_days)
 
     Returns:
         (ts_code, has_signal, status) where status is "ok", "skip", or "error"
     """
-    ts_code, df_json, feature_name, min_days = args
+    ts_code, df_bytes, feature_name, min_days = args
 
     try:
-        # Reconstruct DataFrame from JSON
-        df = pd.read_json(StringIO(df_json))
+        # Reconstruct DataFrame from pickle (faster than JSON)
+        df = pickle.loads(df_bytes)
 
         # Check minimum data requirement
         if len(df) < min_days:
@@ -200,7 +166,8 @@ def _scan_feature_sequential(
             if feature.func(df):
                 signals.append(ts_code)
 
-        except Exception:  # pylint: disable=broad-exception-caught
+        except Exception as e:  # pylint: disable=broad-exception-caught
+            _logger.debug("Error scanning %s for %s: %s", ts_code, feature.name, e)
             errors += 1
 
         # Progress callback
@@ -233,14 +200,14 @@ def _scan_feature_parallel(
     end_date: str = "",
 ) -> ScanResult:
     """Parallel scanning using ProcessPoolExecutor."""
-    # Prepare work items - serialize DataFrames to JSON
+    # Prepare work items - serialize DataFrames to pickle (faster than JSON)
     work_items = []
     missing = 0
 
     for ts_code in ts_codes:
         if ts_code in data_cache:
             df = data_cache[ts_code]
-            work_items.append((ts_code, df.to_json(), feature.name, feature.min_days))
+            work_items.append((ts_code, pickle.dumps(df), feature.name, feature.min_days))
         else:
             missing += 1
 

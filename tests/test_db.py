@@ -101,11 +101,13 @@ class TestInitDb:
             assert cursor.fetchone() is not None
 
     def test_creates_index(self, temp_db):
-        """Should create index on ts_code."""
+        """Should create index on (trade_date, ts_code)."""
         init_db()
 
         with get_connection() as conn:
-            cursor = conn.execute("SELECT name FROM sqlite_master WHERE type='index' AND name='idx_daily_bar_ts_code'")
+            cursor = conn.execute(
+                "SELECT name FROM sqlite_master WHERE type='index' AND name='idx_daily_bar_trade_date'"
+            )
             assert cursor.fetchone() is not None
 
     def test_idempotent(self, temp_db):
