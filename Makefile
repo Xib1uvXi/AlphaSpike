@@ -1,4 +1,4 @@
-.PHONY: install test lint format sync scan backtest clean help redis-clear redis-clear-feature redis-clear-datahub
+.PHONY: install test lint format sync scan backtest clean help redis-clear redis-clear-feature redis-clear-datahub benchmark
 
 # Default target
 help:
@@ -6,6 +6,7 @@ help:
 	@echo "  install              - Install dependencies using Poetry"
 	@echo "  test                 - Run all tests"
 	@echo "  test-cov             - Run tests with coverage report"
+	@echo "  benchmark            - Run performance benchmarks"
 	@echo "  lint                 - Run pylint on source code"
 	@echo "  format               - Format code with black and isort"
 	@echo "  check                - Check code formatting without changes"
@@ -28,6 +29,10 @@ test:
 # Run tests with coverage
 test-cov:
 	poetry run pytest --cov=src --cov-report=term-missing
+
+# Run performance benchmarks
+benchmark:
+	poetry run pytest tests/test_benchmark.py -v -s -m benchmark
 
 # Run pylint
 lint:

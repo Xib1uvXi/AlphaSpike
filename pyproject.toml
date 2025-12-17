@@ -74,3 +74,6 @@ disable = "C,attribute-defined-outside-init,fixme,too-few-public-methods,duplica
 filterwarnings = [
     "ignore:Workbook contains no default style:UserWarning:openpyxl.styles.stylesheet",
 ]
+markers = [
+    "benchmark: marks tests as benchmarks (run with 'pytest -m benchmark')",
+]
