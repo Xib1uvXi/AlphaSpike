@@ -1,11 +1,9 @@
 """Daily bar data storage and synchronization module."""
 
 from datetime import datetime
-from io import StringIO
 
 import pandas as pd
 
-from src.datahub.cache import get_daily_bar_cache, set_daily_bar_cache
 from src.datahub.db import get_connection, init_db
 from src.datahub.symbol import load_all_symbols
 from src.datahub.trading_calendar import get_last_trading_day
@@ -194,62 +192,7 @@ def get_daily_bar_from_db(
     end_date: str | None = None,
 ) -> pd.DataFrame:
     """
-    Get daily bar data from SQLite database with Redis caching.
-
-    Uses Redis cache with 2-hour TTL. Cache key includes today's date.
-    Falls back to database query if Redis is unavailable.
-
-    Args:
-        ts_code: Stock code (e.g., '000001.SZ')
-        start_date: Start date in YYYYMMDD format (optional)
-        end_date: End date in YYYYMMDD format (optional)
-
-    Returns:
-        DataFrame with daily bar data.
-    """
-    # Try to get from cache
-    try:
-        cached = get_daily_bar_cache(ts_code, start_date, end_date)
-        if cached:
-            return pd.read_json(StringIO(cached))
-    except Exception:  # pylint: disable=broad-exception-caught
-        pass  # Redis unavailable, fall through to database
-
-    # Query from database
-    query = "SELECT * FROM daily_bar WHERE ts_code = ?"
-    params = [ts_code]
-
-    if start_date:
-        query += " AND trade_date >= ?"
-        params.append(start_date)
-
-    if end_date:
-        query += " AND trade_date <= ?"
-        params.append(end_date)
-
-    query += " ORDER BY trade_date"
-
-    with get_connection() as conn:
-        df = pd.read_sql_query(query, conn, params=params)
-
-    # Store in cache
-    try:
-        set_daily_bar_cache(ts_code, start_date, end_date, df.to_json())
-    except Exception:  # pylint: disable=broad-exception-caught
-        pass  # Redis unavailable, continue without caching
-
-    return df
-
-
-def get_daily_bar_from_db_no_cache(
-    ts_code: str,
-    start_date: str | None = None,
-    end_date: str | None = None,
-) -> pd.DataFrame:
-    """
-    Get daily bar data directly from SQLite database without Redis caching.
-
-    Use this function when Redis caching is not desired (e.g., backtesting).
+    Get daily bar data from SQLite database.
 
     Args:
         ts_code: Stock code (e.g., '000001.SZ')

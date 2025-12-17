@@ -38,7 +38,7 @@ def main() -> None:
     parser.add_argument(
         "--datahub",
         action="store_true",
-        help="Clear datahub cache (sync status, daily bar cache)",
+        help="Clear datahub cache (sync status)",
     )
     parser.add_argument(
         "--feature",

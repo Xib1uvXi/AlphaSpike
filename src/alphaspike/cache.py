@@ -67,9 +67,13 @@ def get_feature_cache(feature_name: str, date: str, client: redis.Redis) -> list
     return None
 
 
+FEATURE_CACHE_TTL_DAYS = 14
+FEATURE_CACHE_TTL_SECONDS = FEATURE_CACHE_TTL_DAYS * 24 * 60 * 60
+
+
 def set_feature_cache(feature_name: str, date: str, ts_codes: list[str], client: redis.Redis) -> None:
     """
-    Cache feature results (no TTL - permanent).
+    Cache feature results with TTL.
 
     Args:
         feature_name: Feature name (e.g., 'bbc')
@@ -78,4 +82,4 @@ def set_feature_cache(feature_name: str, date: str, ts_codes: list[str], client:
         client: Redis client instance
     """
     key = _get_feature_cache_key(feature_name, date)
-    client.set(key, json.dumps(ts_codes))
+    client.set(key, json.dumps(ts_codes), ex=FEATURE_CACHE_TTL_SECONDS)

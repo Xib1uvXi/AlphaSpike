@@ -147,45 +147,43 @@ class TestGetLatestTradeDate:
         assert result is None
 
 
-@patch("src.datahub.daily_bar.set_daily_bar_cache")
-@patch("src.datahub.daily_bar.get_daily_bar_cache", return_value=None)
 class TestGetDailyBarFromDb:
     """Tests for get_daily_bar_from_db function."""
 
-    def test_returns_all_data(self, mock_get_cache, mock_set_cache, temp_db, sample_daily_bar_df):
+    def test_returns_all_data(self, temp_db, sample_daily_bar_df):
         """Should return all data for a stock."""
         _save_to_db(sample_daily_bar_df)
 
         result = get_daily_bar_from_db("000001.SZ")
         assert len(result) == 3
 
-    def test_filters_by_start_date(self, mock_get_cache, mock_set_cache, temp_db, sample_daily_bar_df):
+    def test_filters_by_start_date(self, temp_db, sample_daily_bar_df):
         """Should filter by start date."""
         _save_to_db(sample_daily_bar_df)
 
         result = get_daily_bar_from_db("000001.SZ", start_date="20231204")
         assert len(result) == 2
 
-    def test_filters_by_end_date(self, mock_get_cache, mock_set_cache, temp_db, sample_daily_bar_df):
+    def test_filters_by_end_date(self, temp_db, sample_daily_bar_df):
         """Should filter by end date."""
         _save_to_db(sample_daily_bar_df)
 
         result = get_daily_bar_from_db("000001.SZ", end_date="20231204")
         assert len(result) == 2
 
-    def test_filters_by_date_range(self, mock_get_cache, mock_set_cache, temp_db, sample_daily_bar_df):
+    def test_filters_by_date_range(self, temp_db, sample_daily_bar_df):
         """Should filter by date range."""
         _save_to_db(sample_daily_bar_df)
 
         result = get_daily_bar_from_db("000001.SZ", start_date="20231201", end_date="20231204")
         assert len(result) == 2
 
-    def test_returns_empty_for_no_data(self, mock_get_cache, mock_set_cache, temp_db):
+    def test_returns_empty_for_no_data(self, temp_db):
         """Should return empty DataFrame when no data."""
         result = get_daily_bar_from_db("000001.SZ")
         assert len(result) == 0
 
-    def test_ordered_by_trade_date(self, mock_get_cache, mock_set_cache, temp_db, sample_daily_bar_df):
+    def test_ordered_by_trade_date(self, temp_db, sample_daily_bar_df):
         """Should return data ordered by trade_date."""
         _save_to_db(sample_daily_bar_df)
 

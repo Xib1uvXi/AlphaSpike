@@ -9,7 +9,7 @@ from io import StringIO
 import pandas as pd
 
 from src.alphaspike.scanner import FEATURES
-from src.datahub.daily_bar import batch_load_daily_bars, get_daily_bar_from_db_no_cache
+from src.datahub.daily_bar import batch_load_daily_bars, get_daily_bar_from_db
 from src.datahub.symbol import get_ts_codes
 from src.datahub.trading_calendar import _load_calendar
 from src.feature.bbc import bbc
@@ -154,14 +154,14 @@ def _backtest_day_worker(args: tuple) -> list[dict]:
     results = []
     for ts_code in ts_codes:
         try:
-            df = get_daily_bar_from_db_no_cache(ts_code, end_date=signal_date)
+            df = get_daily_bar_from_db(ts_code, end_date=signal_date)
             if len(df) < min_days:
                 continue
 
             # Check if signal triggered
             if feature_func(df):
                 # Need full data for backtest calculation
-                full_df = get_daily_bar_from_db_no_cache(ts_code)
+                full_df = get_daily_bar_from_db(ts_code)
                 result = _calculate_future_returns_from_df(full_df, signal_date, holding_days)
                 if result:
                     results.append(result)
