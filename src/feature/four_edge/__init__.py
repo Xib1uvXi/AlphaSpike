@@ -11,7 +11,9 @@ import pandas as pd
 
 from .edge1 import (
     ATR_VOLATILITY_THRESHOLD,
-    calculate_atr_volatility as _calculate_atr_volatility,
+)
+from .edge1 import calculate_atr_volatility as _calculate_atr_volatility
+from .edge1 import (
     check_edge1_atr_volatility,
 )
 from .edge2 import (
@@ -28,9 +30,13 @@ from .edge2 import (
     STRUCT_PULLBACK,
     STRUCT_RETEST,
     check_edge2,
-    check_edge2_type1_compression as _check_edge2_type1_compression,
-    check_edge2_type2_trend_pullback as _check_edge2_type2_trend_pullback,
+)
+from .edge2 import check_edge2_type1_compression as _check_edge2_type1_compression
+from .edge2 import check_edge2_type2_trend_pullback as _check_edge2_type2_trend_pullback
+from .edge2 import (
     check_edge2_type3_breakout_retest as _check_edge2_type3_breakout_retest,
+)
+from .edge2 import (
     get_edge2_struct_type,
     get_last_struct_type,
 )
@@ -41,10 +47,10 @@ from .edge3 import (
     EDGE3_RETEST_SUPPORT_RATIO,
     EDGE3_VOLUP_THRESHOLD,
     check_edge3,
-    check_edge3_compress as _check_edge3_compress,
-    check_edge3_pullback as _check_edge3_pullback,
-    check_edge3_retest as _check_edge3_retest,
 )
+from .edge3 import check_edge3_compress as _check_edge3_compress
+from .edge3 import check_edge3_pullback as _check_edge3_pullback
+from .edge3 import check_edge3_retest as _check_edge3_retest
 from .edge4 import (
     EDGE4_CONSECUTIVE_BULLISH_DAYS,
     EDGE4_CUMULATIVE_RETURN_THRESHOLD,
@@ -53,11 +59,13 @@ from .edge4 import (
 from .helpers import (
     EDGE3_BULLISH_BODY_RATIO,
     EDGE3_CLOSE_STRONG_RATIO,
-    calculate_amount_ratio as _calculate_amount_ratio,
-    is_bullish_candle as _is_bullish_candle,
-    is_bullish_candle_simple as _is_bullish_candle_simple,
-    is_close_strong as _is_close_strong,
-    is_stop_drop as _is_stop_drop,
+)
+from .helpers import calculate_amount_ratio as _calculate_amount_ratio
+from .helpers import is_bullish_candle as _is_bullish_candle
+from .helpers import is_bullish_candle_simple as _is_bullish_candle_simple
+from .helpers import is_close_strong as _is_close_strong
+from .helpers import is_stop_drop as _is_stop_drop
+from .helpers import (
     precompute_indicators,
 )
 

@@ -30,7 +30,9 @@ EDGE2_T3_RETEST_DAYS_MAX = _cfg.t3_retest_days_max
 EDGE2_T3_RETEST_SUPPORT_RATIO = _cfg.t3_retest_support_ratio
 
 
-def check_edge2_type1_compression(df: pd.DataFrame, indicators: dict | None = None) -> pd.Series:  # pylint: disable=too-many-locals
+def check_edge2_type1_compression(  # pylint: disable=too-many-locals
+    df: pd.DataFrame, indicators: dict | None = None
+) -> pd.Series:
     """
     Edge 2 Type 1: Compression -> Expansion pattern.
 
@@ -142,7 +144,9 @@ def check_edge2_type2_trend_pullback(df: pd.DataFrame, indicators: dict | None =
     return cond_trend & cond_pullback & cond_vol & cond_support
 
 
-def check_edge2_type3_breakout_retest(df: pd.DataFrame, indicators: dict | None = None) -> pd.Series:  # pylint: disable=too-many-locals
+def check_edge2_type3_breakout_retest(  # pylint: disable=too-many-locals
+    df: pd.DataFrame, indicators: dict | None = None
+) -> pd.Series:
     """
     Edge 2 Type 3: Breakout -> Retest pattern.
 

@@ -312,8 +312,14 @@ make check
 src/
 ├── alphaspike/          # Feature scanner CLI
 │   ├── cli.py           # CLI entry point with rich UI
-│   ├── scanner.py       # Feature registry and scan logic
+│   ├── scanner.py       # Scan logic using feature registry
 │   └── cache.py         # Feature result caching
+├── backtest/            # Backtesting module
+│   └── backtest.py      # Core backtest logic for evaluating signals
+├── common/              # Shared utilities
+│   ├── config.py        # Centralized configuration
+│   ├── redis.py         # Unified Redis client
+│   └── logging.py       # Logging configuration
 ├── datahub/             # Data acquisition
 │   ├── main.py          # Sync entry point
 │   ├── symbol.py        # Stock symbol loading
@@ -323,10 +329,19 @@ src/
 │   ├── cache.py         # Sync status caching
 │   └── trading_calendar.py
 └── feature/             # Signal detection modules
+    ├── registry.py      # Central feature registry
+    ├── utils.py         # Shared utilities
     ├── bbc.py
     ├── bullish_cannon.py
     ├── volume_upper_shadow.py
     ├── volume_stagnation.py
     ├── high_retracement.py
-    └── consolidation_breakout.py
+    ├── consolidation_breakout.py
+    └── four_edge/       # Four-Edge feature package
+        ├── __init__.py  # Main four_edge() function
+        ├── helpers.py   # Shared helpers and precompute
+        ├── edge1.py     # ATR volatility condition
+        ├── edge2.py     # Structure patterns
+        ├── edge3.py     # Entry signals
+        └── edge4.py     # Overheated rejection filter
 ```

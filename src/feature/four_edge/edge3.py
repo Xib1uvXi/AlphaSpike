@@ -108,7 +108,9 @@ def check_edge3_pullback(df: pd.DataFrame, indicators: dict | None = None) -> pd
     return branch1 | branch2
 
 
-def check_edge3_retest(df: pd.DataFrame, indicators: dict | None = None) -> pd.Series:  # pylint: disable=too-many-locals
+def check_edge3_retest(  # pylint: disable=too-many-locals
+    df: pd.DataFrame, indicators: dict | None = None
+) -> pd.Series:
     """
     Edge 3 entry signal for RETEST structure.
 

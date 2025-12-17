@@ -88,6 +88,7 @@ def precompute_indicators(df: pd.DataFrame) -> dict:  # pylint: disable=too-many
         "llv20": llv20,
     }
 
+
 # Edge 3 thresholds
 EDGE3_CLOSE_STRONG_RATIO = _cfg.close_strong_ratio
 EDGE3_BULLISH_BODY_RATIO = _cfg.bullish_body_ratio

@@ -19,7 +19,6 @@ import numpy as np
 import pandas as pd
 import pytest
 
-
 # ============================================================================
 # Benchmark 1: Batch Insert Optimization
 # ============================================================================
@@ -213,9 +212,7 @@ def test_compound_index_query_plan():
             print(f"  {row}")
 
         # Add compound index
-        conn.execute(
-            "CREATE INDEX idx_daily_bar_trade_date ON daily_bar (trade_date, ts_code)"
-        )
+        conn.execute("CREATE INDEX idx_daily_bar_trade_date ON daily_bar (trade_date, ts_code)")
         conn.commit()
 
         # Check query plan with index
@@ -237,9 +234,7 @@ def test_compound_index_query_plan():
         time_no_index = (time.perf_counter() - start) / iterations
 
         # With index
-        conn.execute(
-            "CREATE INDEX idx_daily_bar_trade_date ON daily_bar (trade_date, ts_code)"
-        )
+        conn.execute("CREATE INDEX idx_daily_bar_trade_date ON daily_bar (trade_date, ts_code)")
         conn.commit()
 
         start = time.perf_counter()
