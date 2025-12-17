@@ -69,7 +69,7 @@ def bullish_cannon(df: pd.DataFrame) -> bool:  # pylint: disable=too-many-locals
         df: DataFrame with daily bar data containing OHLCV columns
 
     Returns:
-        bool: True if signal detected in last 3 trading days, False otherwise.
+        bool: True if signal detected on the last trading day, False otherwise.
     """
     df = df.dropna()
 
@@ -84,10 +84,10 @@ def bullish_cannon(df: pd.DataFrame) -> bool:  # pylint: disable=too-many-locals
     tmp_df["hhv20"] = tmp_df["high"].rolling(window=20).max().shift(1)  # Previous 20-day high
     tmp_df["ret"] = tmp_df["pct_chg"] / 100  # Convert to decimal
 
-    # Scan for patterns ending in last 3 days
-    # The second cannon should be within last 3 days
+    # Scan for patterns ending on the last day
+    # The second cannon should be on the last day
     scan_end = len(tmp_df)
-    scan_start = max(25, scan_end - 6)  # Look back enough for pattern + 3 day window
+    scan_start = max(25, scan_end - 4)  # Look back enough for pattern
 
     for second_cannon_idx in range(scan_end - 1, scan_start - 1, -1):
         # Try different cannon body lengths (k=1,2,3)
@@ -160,9 +160,9 @@ def bullish_cannon(df: pd.DataFrame) -> bool:  # pylint: disable=too-many-locals
             if upper_ratio > 0.25:
                 continue
 
-            # Check if second cannon is within last 3 trading days
+            # Check if second cannon is on the last trading day
             days_from_end = len(tmp_df) - 1 - second_cannon_idx
-            if days_from_end <= 2:
+            if days_from_end == 0:
                 return True
 
     return False

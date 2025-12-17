@@ -124,7 +124,7 @@ BullishCandle (Edge 4 version, simpler):
 - Close > Open
 - Close >= High - 0.3 * (High - Low) (CloseStrong)
 
-All features use TA-Lib indicators (SMA, ATR, ADX, Bollinger Bands, etc.) and return signals detected in the last 3 trading days.
+All features use TA-Lib indicators (SMA, ATR, ADX, Bollinger Bands, etc.) and return signals detected in the last 1-3 trading days (varies by feature).
 
 ## Installation
 
