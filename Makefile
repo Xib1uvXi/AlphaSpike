@@ -1,4 +1,4 @@
-.PHONY: install test lint format sync scan backtest clean help redis-clear redis-clear-feature redis-clear-datahub benchmark
+.PHONY: install test lint format sync scan backtest track clean help redis-clear redis-clear-feature redis-clear-datahub benchmark
 
 # Default target
 help:
@@ -13,6 +13,7 @@ help:
 	@echo "  sync                 - Sync all daily bar data"
 	@echo "  scan                 - Scan all symbols for feature signals (requires END_DATE)"
 	@echo "  backtest             - Run yearly backtest for a feature (requires YEAR, FEATURE)"
+	@echo "  track                - Track feature signal performance (optional: FEATURE)"
 	@echo "  redis-clear          - Clear all Redis cache keys"
 	@echo "  redis-clear-feature  - Clear feature scan cache only"
 	@echo "  redis-clear-datahub  - Clear datahub cache only"
@@ -68,6 +69,10 @@ ifndef FEATURE
 	$(error FEATURE is required. Usage: make backtest YEAR=2025 FEATURE=bullish_cannon)
 endif
 	poetry run python -m src.backtest.cli --year $(YEAR) --feature $(FEATURE) $(if $(HOLDING_DAYS),--holding-days $(HOLDING_DAYS),) $(if $(WORKERS),--workers $(WORKERS),)
+
+# Track feature signal performance
+track:
+	poetry run python -m src.track.cli $(if $(FEATURE),--feature $(FEATURE),)
 
 # Clear all Redis cache keys
 redis-clear:

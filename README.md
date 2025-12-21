@@ -6,7 +6,7 @@ A Chinese A-share stock screening system that syncs daily bar data from TuShare 
 
 - **Data Synchronization**: Incremental sync of daily OHLCV data for all A-share stocks via TuShare API
 - **Feature Scanning**: Detect candlestick patterns and technical signals across the entire market
-- **Redis Caching**: Cache sync status and scan results for fast resumable operations
+- **Hybrid Caching**: Redis hot cache + SQLite persistence for feature scan results
 - **Rich CLI**: Beautiful terminal UI with progress bars and formatted tables
 
 ## Technical Indicators
@@ -167,7 +167,7 @@ TUSHARE_TOKEN=your_token
 # SQLite database path
 SQLITE_PATH=/path/to/alphaspike.db
 
-# Redis (optional)
+# Redis (optional, for hot cache acceleration)
 REDIS_HOST=localhost
 REDIS_PORT=6379
 REDIS_DB=0
@@ -237,6 +237,35 @@ make backtest YEAR=2025 FEATURE=bullish_cannon HOLDING_DAYS=10
 make backtest YEAR=2025 FEATURE=bullish_cannon WORKERS=4
 ```
 
+### Track Feature Performance
+
+Analyze stored feature signal performance (1d/2d/3d returns):
+
+```bash
+# Track all features
+make track
+
+# Track specific feature
+make track FEATURE=volume_upper_shadow
+```
+
+**Current Performance (2024-12-15 ~ 2024-12-18):**
+
+| Feature | Signals | Period | Win Rate | Avg Return | Best | Worst |
+|---------|---------|--------|----------|------------|------|-------|
+| volume_upper_shadow | 32 | 1D | 78.1% | +2.10% | +7.83% (300779.SZ) | -4.18% (300377.SZ) |
+| volume_upper_shadow | 32 | 2D | 88.2% | +2.53% | +12.54% (300782.SZ) | -3.30% (300879.SZ) |
+| volume_upper_shadow | 32 | 3D | 77.8% | +2.33% | +9.51% (300782.SZ) | -2.41% (300377.SZ) |
+| high_retracement | 7 | 1D | 57.1% | +0.38% | +3.23% (300177.SZ) | -2.98% (601992.SH) |
+| high_retracement | 7 | 2D | 50.0% | +0.71% | +4.55% (600661.SH) | -2.38% (601992.SH) |
+| high_retracement | 7 | 3D | 75.0% | +0.67% | +2.62% (600661.SH) | -2.98% (601992.SH) |
+| four_edge | 102 | 1D | 40.2% | -0.53% | +8.21% (000411.SZ) | -9.58% (002235.SZ) |
+| four_edge | 102 | 2D | 45.4% | -0.72% | +7.36% (002638.SZ) | -17.23% (002235.SZ) |
+| four_edge | 102 | 3D | 41.9% | -1.65% | +7.00% (002638.SZ) | -18.86% (002235.SZ) |
+| bullish_cannon | 2 | 1D | 50.0% | -1.40% | +1.50% (002853.SZ) | -4.30% (301234.SZ) |
+| bullish_cannon | 2 | 2D | 50.0% | +1.09% | +5.63% (002853.SZ) | -3.45% (301234.SZ) |
+| bullish_cannon | 2 | 3D | 0.0% | -6.28% | -6.28% (301234.SZ) | -6.28% (301234.SZ) |
+
 ### Clear Cache
 
 ```bash
@@ -259,6 +288,7 @@ The scan command uses parallel processing with batch data loading for optimal pe
 - **Memory**: ~2-3GB for full market scan (5000+ stocks)
 - **Strategy**: All stock data is loaded into memory in a single database query, then processed in parallel using `ProcessPoolExecutor`
 - **Workers**: Default 6 parallel workers (configurable via `WORKERS` parameter)
+- **Caching**: Hybrid approach with Redis hot cache (14-day TTL) + SQLite persistence. Read path: Redis → SQLite → scan. Write path: writes to both.
 
 ### Backtest
 
@@ -313,9 +343,14 @@ src/
 ├── alphaspike/          # Feature scanner CLI
 │   ├── cli.py           # CLI entry point with rich UI
 │   ├── scanner.py       # Scan logic using feature registry
-│   └── cache.py         # Feature result caching
+│   ├── cache.py         # Feature result caching (Redis + SQLite)
+│   └── db.py            # SQLite persistence for feature results
 ├── backtest/            # Backtesting module
+│   ├── cli.py           # CLI entry point with rich UI
 │   └── backtest.py      # Core backtest logic for evaluating signals
+├── track/               # Performance tracking module
+│   ├── cli.py           # CLI entry point with rich UI
+│   └── tracker.py       # Core tracking logic for signal returns
 ├── common/              # Shared utilities
 │   ├── config.py        # Centralized configuration
 │   ├── redis.py         # Unified Redis client

@@ -104,8 +104,8 @@ def scan_feature(
     Returns:
         ScanResult with signals and statistics
     """
-    # Try cache first
-    if use_cache and redis_client:
+    # Try cache first (works with or without Redis)
+    if use_cache:
         cached = get_feature_cache(feature.name, end_date, redis_client)
         if cached is not None:
             return ScanResult(
@@ -174,9 +174,8 @@ def _scan_feature_sequential(
         if progress_callback:
             progress_callback(i + 1, total)
 
-    # Cache results
-    if redis_client:
-        set_feature_cache(feature.name, end_date, signals, redis_client)
+    # Cache results (always persist to SQLite, optionally to Redis)
+    set_feature_cache(feature.name, end_date, signals, redis_client)
 
     return ScanResult(
         feature_name=feature.name,
@@ -246,9 +245,8 @@ def _scan_feature_parallel(
             if progress_callback:
                 progress_callback(completed, total)
 
-    # Cache results
-    if redis_client:
-        set_feature_cache(feature.name, end_date, signals, redis_client)
+    # Cache results (always persist to SQLite, optionally to Redis)
+    set_feature_cache(feature.name, end_date, signals, redis_client)
 
     return ScanResult(
         feature_name=feature.name,
