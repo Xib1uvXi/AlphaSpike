@@ -11,7 +11,7 @@ help:
 	@echo "  format               - Format code with black and isort"
 	@echo "  check                - Check code formatting without changes"
 	@echo "  sync                 - Sync all daily bar data"
-	@echo "  scan                 - Scan all symbols for feature signals (requires END_DATE)"
+	@echo "  scan                 - Scan all symbols for feature signals (requires END_DATE, optional: FEATURE)"
 	@echo "  backtest             - Run yearly backtest for a feature (requires YEAR, FEATURE)"
 	@echo "  track                - Track feature signal performance (optional: FEATURE)"
 	@echo "  redis-clear          - Clear all Redis cache keys"
@@ -37,7 +37,8 @@ benchmark:
 
 # Run pylint
 lint:
-	poetry run pylint src
+	mkdir -p .data/pylint
+	PYLINTHOME=.data/pylint poetry run pylint src
 
 # Format code
 format:
@@ -58,7 +59,7 @@ scan:
 ifndef END_DATE
 	$(error END_DATE is required. Usage: make scan END_DATE=20251212)
 endif
-	poetry run python -m src.alphaspike.cli --end-date $(END_DATE) $(if $(NO_CACHE),--no-cache,) $(if $(WORKERS),--workers $(WORKERS),)
+	poetry run python -m src.alphaspike.cli --end-date $(END_DATE) $(if $(FEATURE),--feature $(FEATURE),) $(if $(NO_CACHE),--no-cache,) $(if $(WORKERS),--workers $(WORKERS),)
 
 # Run yearly backtest for a feature
 backtest:

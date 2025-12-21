@@ -127,7 +127,5 @@ def get_distinct_feature_names() -> list[str]:
         List of feature names.
     """
     with get_connection() as conn:
-        cursor = conn.execute(
-            "SELECT DISTINCT feature_name FROM feature_result ORDER BY feature_name"
-        )
+        cursor = conn.execute("SELECT DISTINCT feature_name FROM feature_result ORDER BY feature_name")
         return [row[0] for row in cursor.fetchall()]

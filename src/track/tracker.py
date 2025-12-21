@@ -138,6 +138,7 @@ def _calc_period_stats(
     Returns:
         PeriodStats with win rate, avg/max/min returns and corresponding stocks.
     """
+
     # Get return value based on period
     def get_return(r: SignalReturn) -> float | None:
         if period == 1:
@@ -262,9 +263,7 @@ def track_feature_performance(
     data_cache = batch_load_daily_bars(ts_codes_needed)
 
     # Calculate returns for each signal
-    signal_returns: dict[str, list[SignalReturn]] = {
-        fname: [] for fname in feature_results
-    }
+    signal_returns: dict[str, list[SignalReturn]] = {fname: [] for fname in feature_results}
 
     total = len(all_signals)
     for i, (fname, ts_code, signal_date) in enumerate(all_signals):
