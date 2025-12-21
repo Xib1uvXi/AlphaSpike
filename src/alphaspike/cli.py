@@ -8,20 +8,13 @@ from dataclasses import dataclass
 from dotenv import load_dotenv
 from rich.console import Console
 from rich.panel import Panel
-from rich.progress import (
-    BarColumn,
-    Progress,
-    SpinnerColumn,
-    TaskProgressColumn,
-    TextColumn,
-    TimeElapsedColumn,
-)
 from rich.table import Table
 
 load_dotenv()
 
 from src.alphaspike.cache import get_redis_client
 from src.alphaspike.scanner import FEATURES, ScanResult, scan_feature
+from src.common.cli_utils import create_progress_bar, format_duration
 from src.datahub.daily_bar import batch_load_daily_bars
 from src.datahub.symbol import get_ts_codes
 from src.feature.registry import (
@@ -29,19 +22,6 @@ from src.feature.registry import (
     get_all_feature_names,
     get_feature_by_name,
 )
-
-
-def format_duration(seconds: float) -> str:
-    """Format duration in human readable format."""
-    if seconds < 60:
-        return f"{seconds:.1f}s"
-    if seconds < 3600:
-        minutes = int(seconds // 60)
-        secs = int(seconds % 60)
-        return f"{minutes}m {secs}s"
-    hours = int(seconds // 3600)
-    minutes = int((seconds % 3600) // 60)
-    return f"{hours}h {minutes}m"
 
 
 def display_header(console: Console, end_date: str, total_symbols: int, redis_available: bool) -> None:
@@ -197,14 +177,7 @@ def scan_features(
     """Scan features with progress updates."""
     results: list[ScanResult] = []
 
-    with Progress(
-        SpinnerColumn(),
-        TextColumn("[progress.description]{task.description}"),
-        BarColumn(),
-        TaskProgressColumn(),
-        TimeElapsedColumn(),
-        console=console,
-    ) as progress:
+    with create_progress_bar(console) as progress:
         for feature in features_to_scan:
             task_id = progress.add_task(
                 f"[cyan]{feature.name}[/cyan]",

@@ -22,6 +22,7 @@ AlphaSpike includes the following built-in feature detectors:
 | `consolidation_breakout` | Consolidation Breakout - Volume surge breaking out of tight range | 60 days |
 | `bullish_cannon` | Bullish Cannon - Strong bullish candle + consolidation + breakout | 30 days |
 | `four_edge` | Four-Edge - ATR volatility + structure pattern filter | 130 days |
+| `weak_to_strong` | Weak to Strong - Consecutive limit-ups followed by gap-down weakness | 5 days |
 
 ### Detection Criteria
 
@@ -123,6 +124,14 @@ Otherwise → Pass
 BullishCandle (Edge 4 version, simpler):
 - Close > Open
 - Close >= High - 0.3 * (High - Low) (CloseStrong)
+
+**Weak to Strong (弱转强)**
+
+Detects stocks showing weakness after consecutive limit-up days:
+- T-2: Limit-up day (pct_chg > 9.5% for main board, > 19.2% for ChiNext)
+- T-1: Limit-up day (same threshold)
+- T: Gap-down open (open < T-1 close)
+- T: High stays below T-1 close (no recovery)
 
 All features use TA-Lib indicators (SMA, ATR, ADX, Bollinger Bands, etc.) and return signals detected in the last 1-3 trading days (varies by feature).
 
@@ -352,7 +361,9 @@ src/
 │   ├── cli.py           # CLI entry point with rich UI
 │   └── tracker.py       # Core tracking logic for signal returns
 ├── common/              # Shared utilities
-│   ├── config.py        # Centralized configuration
+│   ├── config.py        # Centralized configuration + feature thresholds
+│   ├── cli_utils.py     # Shared CLI utilities (progress bars, formatting)
+│   ├── returns.py       # Return calculation for backtest/tracking
 │   ├── redis.py         # Unified Redis client
 │   └── logging.py       # Logging configuration
 ├── datahub/             # Data acquisition
@@ -372,6 +383,7 @@ src/
     ├── volume_stagnation.py
     ├── high_retracement.py
     ├── consolidation_breakout.py
+    ├── weak_to_strong.py
     └── four_edge/       # Four-Edge feature package
         ├── __init__.py  # Main four_edge() function
         ├── helpers.py   # Shared helpers and precompute

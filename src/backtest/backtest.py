@@ -16,6 +16,9 @@ from src.feature.registry import FEATURE_FUNCS, get_feature_by_name
 
 _logger = get_logger(__name__)
 
+# Columns required for backtest (feature detection + return calculation)
+_BACKTEST_REQUIRED_COLS = ["ts_code", "trade_date", "open", "high", "low", "close", "vol", "pct_chg", "amount"]
+
 
 @dataclass
 class BacktestResult:
@@ -150,7 +153,7 @@ def _backtest_day_worker(args: tuple) -> list[dict]:
                 result = _calculate_future_returns_from_df(full_df, signal_date, holding_days)
                 if result:
                     results.append(result)
-        except Exception:  # pylint: disable=broad-exception-caught
+        except (KeyError, ValueError, IndexError, TypeError):
             continue
 
     return results
@@ -207,7 +210,7 @@ def _backtest_stock_worker(args: tuple) -> list[dict]:
                     results.append(result)
 
         return results
-    except Exception:  # pylint: disable=broad-exception-caught
+    except (KeyError, ValueError, IndexError, TypeError, pickle.UnpicklingError):
         return []
 
 
@@ -357,10 +360,13 @@ def backtest_year(
     for ts_code in ts_codes:
         if ts_code in data_cache:
             df = data_cache[ts_code]
+            # Only serialize required columns to reduce pickle overhead (~30% smaller)
+            cols_to_use = [c for c in _BACKTEST_REQUIRED_COLS if c in df.columns]
+            df_minimal = df[cols_to_use]
             work_items.append(
                 (
                     ts_code,
-                    pickle.dumps(df),
+                    pickle.dumps(df_minimal),
                     trading_days,
                     feature_name,
                     feature_config.min_days,

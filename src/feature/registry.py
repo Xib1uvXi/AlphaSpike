@@ -17,6 +17,7 @@ from src.feature.four_edge import four_edge
 from src.feature.high_retracement import high_retracement
 from src.feature.volume_stagnation import volume_stagnation
 from src.feature.volume_upper_shadow import volume_upper_shadow
+from src.feature.weak_to_strong import weak_to_strong
 
 
 @dataclass
@@ -43,6 +44,7 @@ FEATURES: list[FeatureConfig] = [
     FeatureConfig("consolidation_breakout", consolidation_breakout, 60),
     FeatureConfig("bullish_cannon", bullish_cannon, 30),
     FeatureConfig("four_edge", four_edge, 130),
+    FeatureConfig("weak_to_strong", weak_to_strong, 5),
 ]
 
 # Derived mapping for worker processes (auto-generated from FEATURES)

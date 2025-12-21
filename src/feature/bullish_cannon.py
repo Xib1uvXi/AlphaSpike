@@ -5,7 +5,12 @@ import warnings
 import pandas as pd
 import talib
 
+from src.common.config import BULLISH_CANNON_CONFIG
+
 warnings.filterwarnings("ignore")
+
+# Local reference to config for cleaner code
+_cfg = BULLISH_CANNON_CONFIG
 
 
 def _calculate_candle_metrics(df: pd.DataFrame) -> pd.DataFrame:
@@ -109,20 +114,20 @@ def bullish_cannon(df: pd.DataFrame) -> bool:  # pylint: disable=too-many-locals
             body_df = tmp_df.iloc[body_start:body_end]
 
             # === First Cannon Conditions ===
-            # ret0 >= 7%
-            if day0["ret"] < 0.07:
+            # ret0 >= threshold (default 7%)
+            if day0["ret"] < _cfg.first_cannon_return:
                 continue
 
-            # vol0 >= vol_ma5 * 1.8
-            if pd.isna(day0["vol_ma5"]) or day0["vol"] < day0["vol_ma5"] * 1.8:
+            # vol0 >= vol_ma5 * ratio (default 1.8)
+            if pd.isna(day0["vol_ma5"]) or day0["vol"] < day0["vol_ma5"] * _cfg.first_cannon_vol_ratio:
                 continue
 
-            # body0/range0 >= 0.40
-            if day0["range"] == 0 or day0["body"] / day0["range"] < 0.40:
+            # body0/range0 >= ratio (default 0.40)
+            if day0["range"] == 0 or day0["body"] / day0["range"] < _cfg.first_cannon_body_ratio:
                 continue
 
-            # upper_wick0/range0 <= 0.50
-            if day0["upper_wick"] / day0["range"] > 0.50:
+            # upper_wick0/range0 <= ratio (default 0.50)
+            if day0["upper_wick"] / day0["range"] > _cfg.first_cannon_upper_wick_ratio:
                 continue
 
             # close0 > HHV(high, 20)[-1] (breakthrough)
@@ -130,13 +135,13 @@ def bullish_cannon(df: pd.DataFrame) -> bool:  # pylint: disable=too-many-locals
                 continue
 
             # === Cannon Body Conditions ===
-            # mean(vol1..volk) <= vol0 * 0.8
+            # mean(vol1..volk) <= vol0 * ratio (default 0.8)
             body_vol_mean = body_df["vol"].mean()
-            if body_vol_mean > day0["vol"] * 0.8:
+            if body_vol_mean > day0["vol"] * _cfg.body_vol_contraction:
                 continue
 
-            # max(amplitude1..k) <= 8%
-            if body_df["amplitude"].max() > 0.08:
+            # max(amplitude1..k) <= threshold (default 8%)
+            if body_df["amplitude"].max() > _cfg.body_max_amplitude:
                 continue
 
             # min(low1..k) >= open0 (holds above first cannon's open)
@@ -149,15 +154,15 @@ def bullish_cannon(df: pd.DataFrame) -> bool:  # pylint: disable=too-many-locals
             if second["close"] <= body_high_max:
                 continue
 
-            # vol1 >= mean(vol1..k) * 1.0
-            if second["vol"] < body_vol_mean * 1.0:
+            # vol1 >= mean(vol1..k) * ratio (default 1.0)
+            if second["vol"] < body_vol_mean * _cfg.second_cannon_vol_ratio:
                 continue
 
-            # (high1 - close1) / range1 <= 0.25 (closes near high)
+            # (high1 - close1) / range1 <= ratio (default 0.25, closes near high)
             if second["range"] == 0:
                 continue
             upper_ratio = (second["high"] - second["close"]) / second["range"]
-            if upper_ratio > 0.25:
+            if upper_ratio > _cfg.second_cannon_upper_ratio:
                 continue
 
             # Check if second cannon is on the last trading day

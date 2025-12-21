@@ -5,9 +5,13 @@ import warnings
 import pandas as pd
 import talib
 
+from src.common.config import VOLUME_UPPER_SHADOW_CONFIG
 from src.feature.utils import calculate_price_quantile, calculate_upper_shadow_ratio
 
 warnings.filterwarnings("ignore")
+
+# Local reference to config for cleaner code
+_cfg = VOLUME_UPPER_SHADOW_CONFIG
 
 
 def volume_upper_shadow(df: pd.DataFrame) -> bool:
@@ -52,14 +56,14 @@ def volume_upper_shadow(df: pd.DataFrame) -> bool:
     last = tmp_df.iloc[-1]
     prev_vol_ma10 = tmp_df["vol_ma10"].iloc[-2]  # Previous day's 10-day MA volume
 
-    # Condition 1: Upper shadow ratio > 2%
-    cond1 = last["upper_shadow"] > 2
+    # Condition 1: Upper shadow ratio > threshold
+    cond1 = last["upper_shadow"] > _cfg.upper_shadow_ratio
 
-    # Condition 2: Volume surge (1.2x to 2x of previous day's vol_ma10)
-    cond2 = (last["vol"] >= prev_vol_ma10 * 1.2) and (last["vol"] <= prev_vol_ma10 * 2)
+    # Condition 2: Volume surge (within range of previous day's vol_ma10)
+    cond2 = (last["vol"] >= prev_vol_ma10 * _cfg.vol_surge_min) and (last["vol"] <= prev_vol_ma10 * _cfg.vol_surge_max)
 
-    # Condition 3: Price quantile < 45%
-    cond3 = last["price_quantile"] < 0.45
+    # Condition 3: Price quantile < threshold
+    cond3 = last["price_quantile"] < _cfg.price_quantile_max
 
     # Condition 4: Close > MA5
     cond4 = last["close"] > last["ma5"]
@@ -70,11 +74,11 @@ def volume_upper_shadow(df: pd.DataFrame) -> bool:
     # Condition 6: MA3 > MA5
     cond6 = last["ma3"] > last["ma5"]
 
-    # Condition 7: No limit-up in last 3 days and cumulative gain < 15%
+    # Condition 7: No limit-up in last 3 days and cumulative gain < threshold
     last_3_pct = tmp_df["pct_chg"].tail(3)
-    no_limit_up = (last_3_pct < 9.8).all()  # A-share limit-up is ~10%
+    no_limit_up = (last_3_pct < _cfg.limit_up_threshold).all()
     cumulative_gain = ((1 + last_3_pct / 100).prod() - 1) * 100
-    gain_limited = cumulative_gain < 15
+    gain_limited = cumulative_gain < _cfg.cumulative_gain_max
 
     cond7 = no_limit_up and gain_limited
 

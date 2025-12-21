@@ -68,7 +68,7 @@ def _setup_cli(monkeypatch: pytest.MonkeyPatch, feature_names: list[str]):
     monkeypatch.setattr(cli, "batch_load_daily_bars", lambda ts_codes, end_date: {})
     monkeypatch.setattr(cli, "get_redis_client", lambda: None)
     monkeypatch.setattr(cli, "Console", lambda: mock_console)
-    monkeypatch.setattr(cli, "Progress", DummyProgress)
+    monkeypatch.setattr(cli, "create_progress_bar", lambda console: DummyProgress())
 
     return scan_calls, mock_console
 

@@ -5,7 +5,12 @@ import warnings
 import pandas as pd
 import talib
 
+from src.common.config import CONSOLIDATION_BREAKOUT_CONFIG
+
 warnings.filterwarnings("ignore")
+
+# Local reference to config for cleaner code
+_cfg = CONSOLIDATION_BREAKOUT_CONFIG
 
 
 def _calculate_bb_width(close: pd.Series, timeperiod: int = 20) -> pd.Series:
@@ -51,8 +56,8 @@ def _check_ma20_flat(df: pd.DataFrame) -> pd.Series:
     Check if MA20 is flat based on compound conditions.
 
     Conditions:
-    - abs(MA20 − MA20[5]) / MA20 < 0.003 (stable over 5 days)
-    - STD(MA20, 10) / MA20 < 0.002 (low variance)
+    - abs(MA20 − MA20[5]) / MA20 < threshold (stable over 5 days)
+    - STD(MA20, 10) / MA20 < threshold (low variance)
 
     Args:
         df: DataFrame with ma20 column
@@ -60,9 +65,9 @@ def _check_ma20_flat(df: pd.DataFrame) -> pd.Series:
     Returns:
         pd.Series: Boolean series indicating MA20 flat condition
     """
-    ma20_stable = (df["ma20"] - df["ma20"].shift(5)).abs() / df["ma20"] < 0.003
+    ma20_stable = (df["ma20"] - df["ma20"].shift(5)).abs() / df["ma20"] < _cfg.ma20_stable_ratio
     ma20_std = df["ma20"].rolling(window=10, min_periods=10).std()
-    ma20_low_var = (ma20_std / df["ma20"]) < 0.002
+    ma20_low_var = (ma20_std / df["ma20"]) < _cfg.ma20_variance_ratio
     return ma20_stable & ma20_low_var
 
 
@@ -71,9 +76,9 @@ def _detect_consolidation(df: pd.DataFrame, min_days: int = 5) -> pd.Series:
     Detect consolidation (横盘) periods.
 
     Consolidation conditions:
-    1. ATR_14 / Close < 1.5% (low volatility)
-    2. ADX_14 < 22 (no trend)
-    3. BB_Width < 30th percentile of last 20 days
+    1. ATR_14 / Close < threshold (low volatility)
+    2. ADX_14 < threshold (no trend)
+    3. BB_Width < Nth percentile of last 20 days
     4. MA20 is flat (multiple conditions)
 
     Args:
@@ -85,9 +90,9 @@ def _detect_consolidation(df: pd.DataFrame, min_days: int = 5) -> pd.Series:
     """
     # Combine all consolidation conditions
     daily_consolidation = (
-        (df["atr14"] / df["close"] * 100 < 1.5)  # Low volatility
-        & (df["adx14"] < 22)  # No trend
-        & (df["bb_width_quantile"] < 0.30)  # BB width low
+        (df["atr14"] / df["close"] * 100 < _cfg.atr_close_ratio)  # Low volatility
+        & (df["adx14"] < _cfg.adx_threshold)  # No trend
+        & (df["bb_width_quantile"] < _cfg.bb_width_quantile)  # BB width low
         & _check_ma20_flat(df)  # MA20 flat
     )
 
@@ -103,7 +108,7 @@ def _detect_breakout(df: pd.DataFrame, lookback: int = 10) -> pd.Series:
 
     Breakout conditions:
     1. Close > HHV(High, lookback) - price breaks above consolidation range
-    2. Volume > SMA(Volume, 20) * 1.5 - volume surge
+    2. Volume > SMA(Volume, 20) * threshold - volume surge
 
     Args:
         df: DataFrame with OHLCV data and calculated indicators
@@ -117,9 +122,9 @@ def _detect_breakout(df: pd.DataFrame, lookback: int = 10) -> pd.Series:
     hhv = df["high"].shift(1).rolling(window=lookback, min_periods=lookback).max()
     price_breakout = df["close"] > hhv
 
-    # Condition 2: Volume > SMA(Volume, 20) * 1.5
+    # Condition 2: Volume > SMA(Volume, 20) * ratio
     vol_sma20 = talib.SMA(df["vol"], timeperiod=20)
-    volume_surge = df["vol"] > vol_sma20 * 1.5
+    volume_surge = df["vol"] > vol_sma20 * _cfg.breakout_vol_ratio
 
     breakout_signal = price_breakout & volume_surge
 

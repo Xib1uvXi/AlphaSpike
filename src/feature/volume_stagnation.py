@@ -5,9 +5,13 @@ import warnings
 import pandas as pd
 import talib
 
+from src.common.config import VOLUME_STAGNATION_CONFIG
 from src.feature.utils import calculate_price_quantile, detect_consecutive_signals
 
 warnings.filterwarnings("ignore")
+
+# Local reference to config for cleaner code
+_cfg = VOLUME_STAGNATION_CONFIG
 
 
 def volume_stagnation(df: pd.DataFrame, min_consecutive_days: int = 3) -> bool:
@@ -53,11 +57,11 @@ def volume_stagnation(df: pd.DataFrame, min_consecutive_days: int = 3) -> bool:
     tmp_df["close_ma5"] = talib.MA(tmp_df["close"], timeperiod=5)
     tmp_df["close_ma10"] = talib.MA(tmp_df["close"], timeperiod=10)
 
-    # Volume surge condition: vol > vol_ma10 * 1.5
-    volume_surge = tmp_df["vol"] > tmp_df["vol_ma10"] * 1.5
+    # Volume surge condition: vol > vol_ma10 * ratio
+    volume_surge = tmp_df["vol"] > tmp_df["vol_ma10"] * _cfg.vol_surge_ratio
 
-    # Price stagnation condition: -3% < pct_chg < 3%
-    price_stagnation = (tmp_df["pct_chg"] > -3) & (tmp_df["pct_chg"] < 3)
+    # Price stagnation condition: within range
+    price_stagnation = (tmp_df["pct_chg"] > _cfg.price_change_min) & (tmp_df["pct_chg"] < _cfg.price_change_max)
 
     # Price above MA10 condition: close > close_ma10
     price_above_ma10 = tmp_df["close"] > tmp_df["close_ma10"]
@@ -71,9 +75,11 @@ def volume_stagnation(df: pd.DataFrame, min_consecutive_days: int = 3) -> bool:
     # Detect consecutive signals
     tmp_df["consecutive_signal"] = detect_consecutive_signals(tmp_df["daily_signal"], min_consecutive_days)
 
-    # Condition 1: Price quantile (25-45% based on last 500 days)
+    # Condition 1: Price quantile (within range based on last 500 days)
     tmp_df["price_quantile"] = calculate_price_quantile(tmp_df["close"], window=500)
-    price_in_low_range = (tmp_df["price_quantile"] >= 0.05) & (tmp_df["price_quantile"] <= 0.45)
+    price_in_low_range = (tmp_df["price_quantile"] >= _cfg.price_quantile_min) & (
+        tmp_df["price_quantile"] <= _cfg.price_quantile_max
+    )
 
     # Condition 2: Cumulative gain during consecutive period < 10%
     # Calculate price change from min_consecutive_days ago to now

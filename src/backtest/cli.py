@@ -6,32 +6,12 @@ import time
 
 from rich.console import Console
 from rich.panel import Panel
-from rich.progress import (
-    BarColumn,
-    Progress,
-    SpinnerColumn,
-    TaskProgressColumn,
-    TextColumn,
-    TimeElapsedColumn,
-)
 from rich.table import Table
 
 from src.alphaspike.scanner import FEATURES
 from src.backtest.backtest import YearlyBacktestStats, backtest_year
+from src.common.cli_utils import create_progress_bar, format_duration
 from src.datahub.symbol import get_ts_codes
-
-
-def format_duration(seconds: float) -> str:
-    """Format duration in human readable format."""
-    if seconds < 60:
-        return f"{seconds:.1f}s"
-    if seconds < 3600:
-        minutes = int(seconds // 60)
-        secs = int(seconds % 60)
-        return f"{minutes}m {secs}s"
-    hours = int(seconds // 3600)
-    minutes = int((seconds % 3600) // 60)
-    return f"{hours}h {minutes}m"
 
 
 def display_header(console: Console, feature_name: str, year: int, holding_days: int) -> None:
@@ -148,15 +128,7 @@ def main():
 
     # Run backtest with progress
     console.print(f"[cyan]Running backtest ({total_stocks} stocks)...[/cyan]")
-    with Progress(
-        SpinnerColumn(),
-        TextColumn("[progress.description]{task.description}"),
-        BarColumn(),
-        TaskProgressColumn(),
-        TimeElapsedColumn(),
-        console=console,
-        refresh_per_second=10,
-    ) as progress:
+    with create_progress_bar(console) as progress:
         task_id = progress.add_task(
             "[cyan]Processing stocks[/cyan]",
             total=total_stocks,

@@ -11,6 +11,7 @@ from src.alphaspike.db import (
     get_feature_results_by_name,
 )
 from src.common.logging import get_logger
+from src.common.returns import calculate_period_returns
 from src.datahub.daily_bar import batch_load_daily_bars
 
 _logger = get_logger(__name__)
@@ -76,51 +77,20 @@ def calculate_signal_returns(
     Returns:
         SignalReturn with calculated returns, or None if insufficient data.
     """
-    if df.empty:
+    # Use common return calculation
+    result = calculate_period_returns(df, signal_date, holding_periods=[1, 2, 3])
+    if result is None:
         return None
 
-    # Ensure sorted by trade_date
-    df = df.sort_values("trade_date").reset_index(drop=True)
-
-    # Find rows after signal_date
-    future_df = df[df["trade_date"] > signal_date].reset_index(drop=True)
-
-    if len(future_df) < 1:
-        return None
-
-    # Entry is first day after signal
-    entry_row = future_df.iloc[0]
-    entry_date = str(entry_row["trade_date"])
-    entry_price = float(entry_row["open"])
-
-    if entry_price <= 0:
-        return None
-
-    # Calculate returns for each holding period
-    return_1d = None
-    return_2d = None
-    return_3d = None
-
-    if len(future_df) >= 1:
-        exit_price = float(future_df.iloc[0]["close"])
-        return_1d = (exit_price - entry_price) / entry_price * 100
-
-    if len(future_df) >= 2:
-        exit_price = float(future_df.iloc[1]["close"])
-        return_2d = (exit_price - entry_price) / entry_price * 100
-
-    if len(future_df) >= 3:
-        exit_price = float(future_df.iloc[2]["close"])
-        return_3d = (exit_price - entry_price) / entry_price * 100
-
+    returns = result["returns"]
     return SignalReturn(
         ts_code=ts_code,
         signal_date=signal_date,
-        entry_date=entry_date,
-        entry_price=round(entry_price, 2),
-        return_1d=round(return_1d, 2) if return_1d is not None else None,
-        return_2d=round(return_2d, 2) if return_2d is not None else None,
-        return_3d=round(return_3d, 2) if return_3d is not None else None,
+        entry_date=result["entry_date"],
+        entry_price=result["entry_price"],
+        return_1d=returns.get(1),
+        return_2d=returns.get(2),
+        return_3d=returns.get(3),
     )
 
 

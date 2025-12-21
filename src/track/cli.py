@@ -6,34 +6,14 @@ import time
 
 from rich.console import Console
 from rich.panel import Panel
-from rich.progress import (
-    BarColumn,
-    Progress,
-    SpinnerColumn,
-    TaskProgressColumn,
-    TextColumn,
-    TimeElapsedColumn,
-)
 from rich.table import Table
 
+from src.common.cli_utils import create_progress_bar, format_duration
 from src.track.tracker import (
     FeaturePerformance,
     get_stored_feature_names,
     track_feature_performance,
 )
-
-
-def format_duration(seconds: float) -> str:
-    """Format duration in human readable format."""
-    if seconds < 60:
-        return f"{seconds:.1f}s"
-    if seconds < 3600:
-        minutes = int(seconds // 60)
-        secs = int(seconds % 60)
-        return f"{minutes}m {secs}s"
-    hours = int(seconds // 3600)
-    minutes = int((seconds % 3600) // 60)
-    return f"{hours}h {minutes}m"
 
 
 def display_header(console: Console, feature_name: str | None) -> None:
@@ -141,15 +121,7 @@ def main():
 
     # Run tracking with progress
     console.print("[cyan]Calculating signal returns...[/cyan]")
-    with Progress(
-        SpinnerColumn(),
-        TextColumn("[progress.description]{task.description}"),
-        BarColumn(),
-        TaskProgressColumn(),
-        TimeElapsedColumn(),
-        console=console,
-        refresh_per_second=10,
-    ) as progress:
+    with create_progress_bar(console) as progress:
         task_id = progress.add_task(
             "[cyan]Processing signals[/cyan]",
             total=None,  # Will be set once we know total
