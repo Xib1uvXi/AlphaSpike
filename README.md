@@ -256,7 +256,69 @@ make track
 
 # Track specific feature
 make track FEATURE=volume_upper_shadow
+
+# Track specific date
+make track END_DATE=20251215
 ```
+
+#### Analyze Signals
+
+Analyze signal performance with detailed categorization:
+
+```bash
+# Analyze all features (shows only all-negative signals)
+make track ANALYZE=1
+
+# Analyze specific feature (shows all three categories)
+make track ANALYZE=1 FEATURE=four_edge
+
+# Analyze specific date
+make track ANALYZE=1 END_DATE=20251215
+```
+
+When analyzing **all features**, shows summary and all-negative signals only:
+
+```
+                          All-Negative Signal Summary
+┏━━━━━━━━━━━━━━━━┳━━━━━━━┳━━━━━━━━━━┳━━━━━━━┳━━━━━━━━┳━━━━━━━━┳━━━━━━━━┓
+┃ Feature        ┃ Total ┃ Negative ┃ Ratio ┃ Avg 1D ┃ Avg 2D ┃ Avg 3D ┃
+┡━━━━━━━━━━━━━━━━╇━━━━━━━╇━━━━━━━━━━╇━━━━━━━╇━━━━━━━━╇━━━━━━━━╇━━━━━━━━┩
+│ bullish_cannon │     2 │        1 │ 50.0% │ -4.30% │ -3.45% │ -6.28% │
+│ four_edge      │    86 │       35 │ 40.7% │ -2.92% │ -3.97% │ -4.39% │
+└────────────────┴───────┴──────────┴───────┴────────┴────────┴────────┘
+```
+
+When analyzing a **specific feature**, shows all signals in three categories:
+
+```
+four_edge - Total: 86 valid signals
+
+All Positive (1d>0, 2d>0, 3d>0) - 25 signals (29.07%) | Avg: +2.49% / +2.97% / +3.65%
+┏━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━━┳━━━━━━━━┓
+┃ Stock  ┃ Date       ┃     1D ┃     2D ┃     3D ┃
+┡━━━━━━━━╇━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━━╇━━━━━━━━┩
+│ 605389 │ 2025-12-17 │ +0.13% │ +1.49% │ +6.19% │
+│ ...    │            │        │        │        │
+└────────┴────────────┴────────┴────────┴────────┘
+
+Mixed (some positive, some negative) - 26 signals (30.23%) | Avg: -0.92% / +0.10% / +0.64%
+┏━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━━┳━━━━━━━━┓
+┃ Stock  ┃ Date       ┃     1D ┃     2D ┃     3D ┃
+┡━━━━━━━━╇━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━━╇━━━━━━━━┩
+│ 603759 │ 2025-12-17 │ -0.20% │ +1.00% │ +2.60% │
+│ ...    │            │        │        │        │
+└────────┴────────────┴────────┴────────┴────────┘
+
+All Negative (1d<0, 2d<0, 3d<0) - 35 signals (40.7%) | Avg: -2.92% / -3.97% / -4.39%
+┏━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━━┳━━━━━━━━┓
+┃ Stock  ┃ Date       ┃     1D ┃     2D ┃     3D ┃
+┡━━━━━━━━╇━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━━╇━━━━━━━━┩
+│ 603155 │ 2025-12-17 │ -0.92% │ -0.23% │ -0.17% │
+│ ...    │            │        │        │        │
+└────────┴────────────┴────────┴────────┴────────┘
+```
+
+The ratio column uses color coding: >30% red, 15-30% yellow, <15% green.
 
 **Current Performance (2024-12-15 ~ 2024-12-18):**
 

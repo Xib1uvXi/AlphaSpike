@@ -13,7 +13,7 @@ help:
 	@echo "  sync                 - Sync all daily bar data"
 	@echo "  scan                 - Scan all symbols for feature signals (requires END_DATE, optional: FEATURE)"
 	@echo "  backtest             - Run yearly backtest for a feature (requires YEAR, FEATURE)"
-	@echo "  track                - Track feature signal performance (optional: END_DATE, FEATURE)"
+	@echo "  track                - Track feature signal performance (optional: END_DATE, FEATURE, ANALYZE)"
 	@echo "  redis-clear          - Clear all Redis cache keys"
 	@echo "  redis-clear-feature  - Clear feature scan cache only"
 	@echo "  redis-clear-datahub  - Clear datahub cache only"
@@ -73,7 +73,7 @@ endif
 
 # Track feature signal performance
 track:
-	poetry run python -m src.track.cli $(if $(END_DATE),--end-date $(END_DATE),) $(if $(FEATURE),--feature $(FEATURE),)
+	poetry run python -m src.track.cli $(if $(END_DATE),--end-date $(END_DATE),) $(if $(FEATURE),--feature $(FEATURE),) $(if $(ANALYZE),--analyze,)
 
 # Clear all Redis cache keys
 redis-clear:
