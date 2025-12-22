@@ -65,19 +65,22 @@ def display_feature_signals(console: Console, result: ScanResult) -> None:
     if not result.signals:
         return
 
-    console.print(f"[bold cyan]{result.feature_name}[/bold cyan] - {len(result.signals)} signals:")
+    # Strip .SZ/.SH suffix from ts_codes for display
+    display_signals = [code.split(".")[0] for code in result.signals]
+
+    console.print(f"[bold cyan]{result.feature_name}[/bold cyan] - {len(display_signals)} signals:")
 
     # Show all signals for four_edge, truncate others
     if result.feature_name == "four_edge":
         # Display all signals in rows of 10
-        for i in range(0, len(result.signals), 10):
-            row = result.signals[i : i + 10]
+        for i in range(0, len(display_signals), 10):
+            row = display_signals[i : i + 10]
             console.print(f"  {', '.join(row)}")
     else:
         # Truncate to 20 for other features
-        signals_str = ", ".join(result.signals[:20])
-        if len(result.signals) > 20:
-            signals_str += f", ... (+{len(result.signals) - 20} more)"
+        signals_str = ", ".join(display_signals[:20])
+        if len(display_signals) > 20:
+            signals_str += f", ... (+{len(display_signals) - 20} more)"
         console.print(f"  {signals_str}")
 
     console.print()

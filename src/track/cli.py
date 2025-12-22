@@ -16,12 +16,14 @@ from src.track.tracker import (
 )
 
 
-def display_header(console: Console, feature_name: str | None) -> None:
+def display_header(console: Console, feature_name: str | None, end_date: str | None) -> None:
     """Display the header panel."""
     target = feature_name if feature_name else "All Features"
+    date_info = f"{end_date[:4]}-{end_date[4:6]}-{end_date[6:]}" if end_date else "All Dates"
     header_text = (
         f"[bold cyan]AlphaSpike Feature Tracker[/bold cyan]\n\n"
         f"Tracking: [bold]{target}[/bold]  |  "
+        f"Date: [bold]{date_info}[/bold]  |  "
         f"Periods: [bold]1d, 2d, 3d[/bold]"
     )
     console.print(Panel(header_text, border_style="cyan"))
@@ -98,9 +100,19 @@ def main():
         "--feature",
         help="Feature name to track (optional, tracks all if not specified)",
     )
+    parser.add_argument(
+        "--end-date",
+        help="Scan date to track in YYYYMMDD format (optional, tracks all dates if not specified)",
+    )
     args = parser.parse_args()
 
     console = Console()
+
+    # Validate end_date format if specified
+    end_date = args.end_date
+    if end_date and (len(end_date) != 8 or not end_date.isdigit()):
+        console.print("[red]Error: --end-date must be in YYYYMMDD format[/red]")
+        return 1
 
     # Check if any stored results exist
     if not stored_features:
@@ -115,7 +127,7 @@ def main():
         return 1
 
     # Display header
-    display_header(console, args.feature)
+    display_header(console, args.feature, end_date)
 
     start_time = time.time()
 
@@ -138,6 +150,7 @@ def main():
 
         performances = track_feature_performance(
             feature_name=args.feature,
+            end_date=end_date,
             progress_callback=progress_callback,
         )
 

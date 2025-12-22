@@ -8,6 +8,8 @@ import pandas as pd
 from src.alphaspike.db import (
     get_all_feature_results,
     get_distinct_feature_names,
+    get_feature_result_by_name_and_date,
+    get_feature_results_by_date,
     get_feature_results_by_name,
 )
 from src.common.logging import get_logger
@@ -188,6 +190,7 @@ def _aggregate_performance(
 # pylint: disable=too-many-locals,too-many-branches
 def track_feature_performance(
     feature_name: str | None = None,
+    end_date: str | None = None,
     progress_callback: Callable[[int, int], None] | None = None,
 ) -> list[FeaturePerformance]:
     """
@@ -195,23 +198,41 @@ def track_feature_performance(
 
     Args:
         feature_name: Specific feature to track, or None for all features
+        end_date: Specific scan date to track (YYYYMMDD), or None for all dates
         progress_callback: Optional callback for progress updates
 
     Returns:
         List of FeaturePerformance for each feature.
     """
-    # Get stored results
-    if feature_name:
+    # Get stored results based on filters
+    feature_results: dict[str, list[tuple[str, list[str]]]] = {}
+
+    if feature_name and end_date:
+        # Both feature and date specified
+        stored_results = get_feature_result_by_name_and_date(feature_name, end_date)
+        if not stored_results:
+            return []
+        feature_results = {feature_name: stored_results}
+    elif feature_name:
+        # Only feature specified
         stored_results = get_feature_results_by_name(feature_name)
         if not stored_results:
             return []
         feature_results = {feature_name: stored_results}
+    elif end_date:
+        # Only date specified
+        all_results = get_feature_results_by_date(end_date)
+        if not all_results:
+            return []
+        for fname, scan_date, ts_codes in all_results:
+            if fname not in feature_results:
+                feature_results[fname] = []
+            feature_results[fname].append((scan_date, ts_codes))
     else:
+        # Neither specified - get all
         all_results = get_all_feature_results()
         if not all_results:
             return []
-        # Group by feature_name
-        feature_results: dict[str, list[tuple[str, list[str]]]] = {}
         for fname, scan_date, ts_codes in all_results:
             if fname not in feature_results:
                 feature_results[fname] = []

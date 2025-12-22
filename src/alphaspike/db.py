@@ -129,3 +129,46 @@ def get_distinct_feature_names() -> list[str]:
     with get_connection() as conn:
         cursor = conn.execute("SELECT DISTINCT feature_name FROM feature_result ORDER BY feature_name")
         return [row[0] for row in cursor.fetchall()]
+
+
+def get_feature_results_by_date(scan_date: str) -> list[tuple[str, str, list[str]]]:
+    """
+    Get all feature results for a specific scan date.
+
+    Args:
+        scan_date: Date in YYYYMMDD format
+
+    Returns:
+        List of (feature_name, scan_date, ts_codes) tuples.
+    """
+    with get_connection() as conn:
+        cursor = conn.execute(
+            "SELECT feature_name, scan_date, ts_codes FROM feature_result WHERE scan_date = ? ORDER BY feature_name",
+            (scan_date,),
+        )
+        results = []
+        for row in cursor.fetchall():
+            results.append((row[0], row[1], json.loads(row[2])))
+        return results
+
+
+def get_feature_result_by_name_and_date(feature_name: str, scan_date: str) -> list[tuple[str, list[str]]]:
+    """
+    Get feature result for a specific feature and date.
+
+    Args:
+        feature_name: Feature name (e.g., 'bbc')
+        scan_date: Date in YYYYMMDD format
+
+    Returns:
+        List of (scan_date, ts_codes) tuples (at most one element).
+    """
+    with get_connection() as conn:
+        cursor = conn.execute(
+            "SELECT scan_date, ts_codes FROM feature_result WHERE feature_name = ? AND scan_date = ?",
+            (feature_name, scan_date),
+        )
+        results = []
+        for row in cursor.fetchall():
+            results.append((row[0], json.loads(row[1])))
+        return results
