@@ -6,34 +6,30 @@ authors = [{ name = "Wang Xi", email = "xib1102@icloud.com" }]
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
-    "dotenv (>=0.9.9,<0.10.0)",
-    "pandas (>=2.3.3,<3.0.0)",
-    "tushare (>=1.4.24,<2.0.0)",
-    "xlrd (>=2.0.2,<3.0.0)",
-    "openpyxl (>=3.1.5,<4.0.0)",
-    "pyarrow (>=22.0.0,<23.0.0)",
-    "redis (>=7.1.0,<8.0.0)",
-    "ta-lib (>=0.6.8,<0.7.0)",
-    "rich (>=13.0.0,<14.0.0)",
-]
-
-[tool.poetry]
-packages = [
-    { include = "alphaspike", from = "src" },
-    { include = "datahub", from = "src" },
-    { include = "feature", from = "src" },
+    "dotenv>=0.9.9,<0.10.0",
+    "pandas>=2.3.3,<3.0.0",
+    "tushare>=1.4.24,<2.0.0",
+    "xlrd>=2.0.2,<3.0.0",
+    "openpyxl>=3.1.5,<4.0.0",
+    "pyarrow>=22.0.0,<23.0.0",
+    "redis>=7.1.0,<8.0.0",
+    "ta-lib>=0.6.8,<0.7.0",
+    "rich>=13.0.0,<14.0.0",
 ]
 
 [build-system]
-requires = ["poetry-core>=2.0.0,<3.0.0"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/alphaspike", "src/datahub", "src/feature"]
 
 [dependency-groups]
 dev = [
-    "pytest (>=9.0.2,<10.0.0)",
-    "black (>=25.12.0,<26.0.0)",
-    "isort (>=7.0.0,<8.0.0)",
-    "pylint (>=4.0.4,<5.0.0)",
+    "pytest>=9.0.2,<10.0.0",
+    "black>=25.12.0,<26.0.0",
+    "isort>=7.0.0,<8.0.0",
+    "pylint>=4.0.4,<5.0.0",
 ]
 
 [tool.black]

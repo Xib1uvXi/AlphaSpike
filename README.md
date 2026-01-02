@@ -140,7 +140,7 @@ All features use TA-Lib indicators (SMA, ATR, ADX, Bollinger Bands, etc.) and re
 ### Prerequisites
 
 - Python 3.10+
-- [Poetry](https://python-poetry.org/)
+- [uv](https://docs.astral.sh/uv/) (recommended) or pip
 - [TA-Lib](https://ta-lib.org/) C library
 - Redis (optional, for caching)
 - TuShare Pro account with API token
@@ -156,7 +156,7 @@ brew install ta-lib
 ```bash
 make install
 # or
-poetry install
+uv sync
 ```
 
 ### Configuration
@@ -388,10 +388,10 @@ make test-cov
 make benchmark
 
 # Single test file
-poetry run pytest tests/test_symbol.py -v
+uv run pytest tests/test_symbol.py -v
 
 # Specific test
-poetry run pytest tests/test_symbol.py::test_load_sse_symbols -v
+uv run pytest tests/test_symbol.py::test_load_sse_symbols -v
 ```
 
 ### Code Quality

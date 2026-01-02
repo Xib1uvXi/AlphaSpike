@@ -3,7 +3,7 @@
 # Default target
 help:
 	@echo "Available targets:"
-	@echo "  install              - Install dependencies using Poetry"
+	@echo "  install              - Install dependencies using uv"
 	@echo "  test                 - Run all tests"
 	@echo "  test-cov             - Run tests with coverage report"
 	@echo "  benchmark            - Run performance benchmarks"
@@ -21,45 +21,45 @@ help:
 
 # Install dependencies
 install:
-	poetry install
+	uv sync
 
 # Run all tests
 test:
-	poetry run pytest -v
+	uv run pytest -v
 
 # Run tests with coverage
 test-cov:
-	poetry run pytest --cov=src --cov-report=term-missing
+	uv run pytest --cov=src --cov-report=term-missing
 
 # Run performance benchmarks
 benchmark:
-	poetry run pytest tests/test_benchmark.py -v -s -m benchmark
+	uv run pytest tests/test_benchmark.py -v -s -m benchmark
 
 # Run pylint
 lint:
 	mkdir -p .data/pylint
-	PYLINTHOME=.data/pylint poetry run pylint src
+	PYLINTHOME=.data/pylint uv run pylint src
 
 # Format code
 format:
-	poetry run black src tests
-	poetry run isort src tests
+	uv run black src tests
+	uv run isort src tests
 
 # Check formatting without changes
 check:
-	poetry run black --check src tests
-	poetry run isort --check-only src tests
+	uv run black --check src tests
+	uv run isort --check-only src tests
 
 # Sync all daily bar data
 sync:
-	poetry run python -m src.datahub.main $(if $(END_DATE),--end-date $(END_DATE),)
+	uv run python -m src.datahub.main $(if $(END_DATE),--end-date $(END_DATE),)
 
 # Scan all symbols for feature signals
 scan:
 ifndef END_DATE
 	$(error END_DATE is required. Usage: make scan END_DATE=20251212)
 endif
-	poetry run python -m src.alphaspike.cli --end-date $(END_DATE) $(if $(FEATURE),--feature $(FEATURE),) $(if $(NO_CACHE),--no-cache,) $(if $(WORKERS),--workers $(WORKERS),)
+	uv run python -m src.alphaspike.cli --end-date $(END_DATE) $(if $(FEATURE),--feature $(FEATURE),) $(if $(NO_CACHE),--no-cache,) $(if $(WORKERS),--workers $(WORKERS),)
 
 # Run yearly backtest for a feature
 backtest:
@@ -69,23 +69,23 @@ endif
 ifndef FEATURE
 	$(error FEATURE is required. Usage: make backtest YEAR=2025 FEATURE=bullish_cannon)
 endif
-	poetry run python -m src.backtest.cli --year $(YEAR) --feature $(FEATURE) $(if $(HOLDING_DAYS),--holding-days $(HOLDING_DAYS),) $(if $(WORKERS),--workers $(WORKERS),)
+	uv run python -m src.backtest.cli --year $(YEAR) --feature $(FEATURE) $(if $(HOLDING_DAYS),--holding-days $(HOLDING_DAYS),) $(if $(WORKERS),--workers $(WORKERS),)
 
 # Track feature signal performance
 track:
-	poetry run python -m src.track.cli $(if $(END_DATE),--end-date $(END_DATE),) $(if $(FEATURE),--feature $(FEATURE),) $(if $(ANALYZE),--analyze,)
+	uv run python -m src.track.cli $(if $(END_DATE),--end-date $(END_DATE),) $(if $(FEATURE),--feature $(FEATURE),) $(if $(ANALYZE),--analyze,)
 
 # Clear all Redis cache keys
 redis-clear:
-	poetry run python -m src.datahub.clear_cache --all
+	uv run python -m src.datahub.clear_cache --all
 
 # Clear feature scan cache only
 redis-clear-feature:
-	poetry run python -m src.datahub.clear_cache --feature
+	uv run python -m src.datahub.clear_cache --feature
 
 # Clear datahub cache only
 redis-clear-datahub:
-	poetry run python -m src.datahub.clear_cache --datahub
+	uv run python -m src.datahub.clear_cache --datahub
 
 # Clean cache and temporary files
 clean:
