@@ -17,6 +17,8 @@ from src.feature.four_edge import four_edge
 from src.feature.high_retracement import high_retracement
 from src.feature.volume_stagnation import volume_stagnation
 from src.feature.volume_upper_shadow import volume_upper_shadow
+from src.feature.volume_upper_shadow_opz import volume_upper_shadow_opz
+from src.feature.volume_upper_shadow_v2 import volume_upper_shadow_v2
 from src.feature.weak_to_strong import weak_to_strong
 
 
@@ -39,6 +41,8 @@ class FeatureConfig:
 FEATURES: list[FeatureConfig] = [
     FeatureConfig("bbc", bbc, 1000),
     FeatureConfig("volume_upper_shadow", volume_upper_shadow, 220),
+    FeatureConfig("volume_upper_shadow_opz", volume_upper_shadow_opz, 220),
+    FeatureConfig("volume_upper_shadow_v2", volume_upper_shadow_v2, 220),
     FeatureConfig("volume_stagnation", volume_stagnation, 550),
     FeatureConfig("high_retracement", high_retracement, 1500),
     FeatureConfig("consolidation_breakout", consolidation_breakout, 60),

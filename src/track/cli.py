@@ -19,10 +19,28 @@ from src.track.tracker import (
 )
 
 
-def display_header(console: Console, feature_name: str | None, end_date: str | None) -> None:
+def _format_date(date: str | None) -> str:
+    """Format date string as YYYY-MM-DD."""
+    if not date:
+        return ""
+    return f"{date[:4]}-{date[4:6]}-{date[6:]}"
+
+
+def _format_date_range(start_date: str | None, end_date: str | None) -> str:
+    """Format date range for display."""
+    if start_date and end_date:
+        return f"{_format_date(start_date)} ~ {_format_date(end_date)}"
+    if start_date:
+        return f"{_format_date(start_date)} ~"
+    if end_date:
+        return f"~ {_format_date(end_date)}"
+    return "All Dates"
+
+
+def display_header(console: Console, feature_name: str | None, start_date: str | None, end_date: str | None) -> None:
     """Display the header panel."""
     target = feature_name if feature_name else "All Features"
-    date_info = f"{end_date[:4]}-{end_date[4:6]}-{end_date[6:]}" if end_date else "All Dates"
+    date_info = _format_date_range(start_date, end_date)
     header_text = (
         f"[bold cyan]AlphaSpike Feature Tracker[/bold cyan]\n\n"
         f"Tracking: [bold]{target}[/bold]  |  "
@@ -90,10 +108,12 @@ def display_performance_table(console: Console, performances: list[FeaturePerfor
         console.print()
 
 
-def display_analysis_header(console: Console, feature_name: str | None, end_date: str | None) -> None:
+def display_analysis_header(
+    console: Console, feature_name: str | None, start_date: str | None, end_date: str | None
+) -> None:
     """Display the header panel for analysis mode."""
     target = feature_name if feature_name else "All Features"
-    date_info = f"{end_date[:4]}-{end_date[4:6]}-{end_date[6:]}" if end_date else "All Dates"
+    date_info = _format_date_range(start_date, end_date)
     header_text = (
         f"[bold yellow]AlphaSpike All-Negative Signal Analysis[/bold yellow]\n\n"
         f"Analyzing: [bold]{target}[/bold]  |  "
@@ -252,9 +272,9 @@ def display_analysis_details(console: Console, analyses: list[AllNegativeAnalysi
             console.print()
 
 
-def run_analysis_mode(console: Console, feature_name: str | None, end_date: str | None) -> int:
+def run_analysis_mode(console: Console, feature_name: str | None, start_date: str | None, end_date: str | None) -> int:
     """Run the all-negative signal analysis mode."""
-    display_analysis_header(console, feature_name, end_date)
+    display_analysis_header(console, feature_name, start_date, end_date)
 
     start_time = time.time()
 
@@ -276,6 +296,7 @@ def run_analysis_mode(console: Console, feature_name: str | None, end_date: str 
 
         analyses = analyze_all_negative_signals(
             feature_name=feature_name,
+            start_date=start_date,
             end_date=end_date,
             progress_callback=progress_callback,
         )
@@ -305,9 +326,9 @@ def run_analysis_mode(console: Console, feature_name: str | None, end_date: str 
     return 0
 
 
-def run_track_mode(console: Console, feature_name: str | None, end_date: str | None) -> int:
+def run_track_mode(console: Console, feature_name: str | None, start_date: str | None, end_date: str | None) -> int:
     """Run the standard tracking mode."""
-    display_header(console, feature_name, end_date)
+    display_header(console, feature_name, start_date, end_date)
 
     start_time = time.time()
 
@@ -329,6 +350,7 @@ def run_track_mode(console: Console, feature_name: str | None, end_date: str | N
 
         performances = track_feature_performance(
             feature_name=feature_name,
+            start_date=start_date,
             end_date=end_date,
             progress_callback=progress_callback,
         )
@@ -351,6 +373,11 @@ def run_track_mode(console: Console, feature_name: str | None, end_date: str | N
     return 0
 
 
+def _is_valid_date(date_str: str | None) -> bool:
+    """Check if date string is valid YYYYMMDD format."""
+    return date_str is None or (len(date_str) == 8 and date_str.isdigit())
+
+
 def main():
     """Main entry point for CLI."""
     stored_features = get_stored_feature_names()
@@ -365,8 +392,12 @@ def main():
         help="Feature name to track (optional, tracks all if not specified)",
     )
     parser.add_argument(
+        "--start-date",
+        help="Start date in YYYYMMDD format (inclusive, optional)",
+    )
+    parser.add_argument(
         "--end-date",
-        help="Scan date to track in YYYYMMDD format (optional, tracks all dates if not specified)",
+        help="End date in YYYYMMDD format (inclusive, optional)",
     )
     parser.add_argument(
         "--analyze",
@@ -377,28 +408,30 @@ def main():
 
     console = Console()
 
-    # Validate end_date format if specified
+    # Validate inputs and collect errors
+    start_date = args.start_date
     end_date = args.end_date
-    if end_date and (len(end_date) != 8 or not end_date.isdigit()):
-        console.print("[red]Error: --end-date must be in YYYYMMDD format[/red]")
-        return 1
+    error_msg = None
 
-    # Check if any stored results exist
-    if not stored_features:
-        console.print("[red]Error: No stored feature results found.[/red]")
-        console.print("Run 'make scan END_DATE=YYYYMMDD' first to generate feature results.")
-        return 1
+    if not _is_valid_date(start_date):
+        error_msg = "--start-date must be in YYYYMMDD format"
+    elif not _is_valid_date(end_date):
+        error_msg = "--end-date must be in YYYYMMDD format"
+    elif start_date and end_date and start_date > end_date:
+        error_msg = "--start-date must be before or equal to --end-date"
+    elif not stored_features:
+        error_msg = "No stored feature results found. Run 'make scan END_DATE=YYYYMMDD' first."
+    elif args.feature and args.feature not in stored_features:
+        error_msg = f"No stored results for feature '{args.feature}'. Available: {', '.join(stored_features)}"
 
-    # Validate feature name if specified
-    if args.feature and args.feature not in stored_features:
-        console.print(f"[red]Error: No stored results for feature '{args.feature}'[/red]")
-        console.print(f"Available features: {', '.join(stored_features)}")
+    if error_msg:
+        console.print(f"[red]Error: {error_msg}[/red]")
         return 1
 
     # Branch based on --analyze flag
     if args.analyze:
-        return run_analysis_mode(console, args.feature, end_date)
-    return run_track_mode(console, args.feature, end_date)
+        return run_analysis_mode(console, args.feature, start_date, end_date)
+    return run_track_mode(console, args.feature, start_date, end_date)
 
 
 if __name__ == "__main__":

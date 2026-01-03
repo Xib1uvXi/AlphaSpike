@@ -172,3 +172,92 @@ def get_feature_result_by_name_and_date(feature_name: str, scan_date: str) -> li
         for row in cursor.fetchall():
             results.append((row[0], json.loads(row[1])))
         return results
+
+
+def get_feature_results_by_name_and_date_range(
+    feature_name: str,
+    start_date: str | None = None,
+    end_date: str | None = None,
+) -> list[tuple[str, list[str]]]:
+    """
+    Get feature results for a specific feature within a date range.
+
+    Args:
+        feature_name: Feature name (e.g., 'bbc')
+        start_date: Start date in YYYYMMDD format (inclusive), or None for no lower bound
+        end_date: End date in YYYYMMDD format (inclusive), or None for no upper bound
+
+    Returns:
+        List of (scan_date, ts_codes) tuples.
+    """
+    with get_connection() as conn:
+        if start_date and end_date:
+            cursor = conn.execute(
+                "SELECT scan_date, ts_codes FROM feature_result "
+                "WHERE feature_name = ? AND scan_date >= ? AND scan_date <= ? ORDER BY scan_date",
+                (feature_name, start_date, end_date),
+            )
+        elif start_date:
+            cursor = conn.execute(
+                "SELECT scan_date, ts_codes FROM feature_result "
+                "WHERE feature_name = ? AND scan_date >= ? ORDER BY scan_date",
+                (feature_name, start_date),
+            )
+        elif end_date:
+            cursor = conn.execute(
+                "SELECT scan_date, ts_codes FROM feature_result "
+                "WHERE feature_name = ? AND scan_date <= ? ORDER BY scan_date",
+                (feature_name, end_date),
+            )
+        else:
+            cursor = conn.execute(
+                "SELECT scan_date, ts_codes FROM feature_result WHERE feature_name = ? ORDER BY scan_date",
+                (feature_name,),
+            )
+        results = []
+        for row in cursor.fetchall():
+            results.append((row[0], json.loads(row[1])))
+        return results
+
+
+def get_all_feature_results_by_date_range(
+    start_date: str | None = None,
+    end_date: str | None = None,
+) -> list[tuple[str, str, list[str]]]:
+    """
+    Get all feature results within a date range.
+
+    Args:
+        start_date: Start date in YYYYMMDD format (inclusive), or None for no lower bound
+        end_date: End date in YYYYMMDD format (inclusive), or None for no upper bound
+
+    Returns:
+        List of (feature_name, scan_date, ts_codes) tuples.
+    """
+    with get_connection() as conn:
+        if start_date and end_date:
+            cursor = conn.execute(
+                "SELECT feature_name, scan_date, ts_codes FROM feature_result "
+                "WHERE scan_date >= ? AND scan_date <= ? ORDER BY feature_name, scan_date",
+                (start_date, end_date),
+            )
+        elif start_date:
+            cursor = conn.execute(
+                "SELECT feature_name, scan_date, ts_codes FROM feature_result "
+                "WHERE scan_date >= ? ORDER BY feature_name, scan_date",
+                (start_date,),
+            )
+        elif end_date:
+            cursor = conn.execute(
+                "SELECT feature_name, scan_date, ts_codes FROM feature_result "
+                "WHERE scan_date <= ? ORDER BY feature_name, scan_date",
+                (end_date,),
+            )
+        else:
+            cursor = conn.execute(
+                "SELECT feature_name, scan_date, ts_codes FROM feature_result ORDER BY feature_name, scan_date"
+            )
+        results = []
+        for row in cursor.fetchall():
+            results.append((row[0], row[1], json.loads(row[2])))
+        return results

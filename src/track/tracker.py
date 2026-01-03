@@ -7,10 +7,10 @@ import pandas as pd
 
 from src.alphaspike.db import (
     get_all_feature_results,
+    get_all_feature_results_by_date_range,
     get_distinct_feature_names,
-    get_feature_result_by_name_and_date,
-    get_feature_results_by_date,
     get_feature_results_by_name,
+    get_feature_results_by_name_and_date_range,
 )
 from src.common.logging import get_logger
 from src.common.returns import calculate_period_returns
@@ -235,6 +235,7 @@ def _aggregate_performance(
 # pylint: disable=too-many-locals,too-many-branches
 def track_feature_performance(
     feature_name: str | None = None,
+    start_date: str | None = None,
     end_date: str | None = None,
     progress_callback: Callable[[int, int], None] | None = None,
 ) -> list[FeaturePerformance]:
@@ -243,7 +244,8 @@ def track_feature_performance(
 
     Args:
         feature_name: Specific feature to track, or None for all features
-        end_date: Specific scan date to track (YYYYMMDD), or None for all dates
+        start_date: Start date (YYYYMMDD, inclusive), or None for no lower bound
+        end_date: End date (YYYYMMDD, inclusive), or None for no upper bound
         progress_callback: Optional callback for progress updates
 
     Returns:
@@ -252,21 +254,24 @@ def track_feature_performance(
     # Get stored results based on filters
     feature_results: dict[str, list[tuple[str, list[str]]]] = {}
 
-    if feature_name and end_date:
-        # Both feature and date specified
-        stored_results = get_feature_result_by_name_and_date(feature_name, end_date)
+    # Determine which query to use based on filters
+    has_date_range = start_date is not None or end_date is not None
+
+    if feature_name and has_date_range:
+        # Feature with date range
+        stored_results = get_feature_results_by_name_and_date_range(feature_name, start_date, end_date)
         if not stored_results:
             return []
         feature_results = {feature_name: stored_results}
     elif feature_name:
-        # Only feature specified
+        # Only feature specified (no date filter)
         stored_results = get_feature_results_by_name(feature_name)
         if not stored_results:
             return []
         feature_results = {feature_name: stored_results}
-    elif end_date:
-        # Only date specified
-        all_results = get_feature_results_by_date(end_date)
+    elif has_date_range:
+        # Date range without feature filter
+        all_results = get_all_feature_results_by_date_range(start_date, end_date)
         if not all_results:
             return []
         for fname, scan_date, ts_codes in all_results:
@@ -487,6 +492,7 @@ def _analyze_negative_signals(
 # pylint: disable=too-many-locals,too-many-branches
 def analyze_all_negative_signals(
     feature_name: str | None = None,
+    start_date: str | None = None,
     end_date: str | None = None,
     progress_callback: Callable[[int, int], None] | None = None,
 ) -> list[AllNegativeAnalysis]:
@@ -497,7 +503,8 @@ def analyze_all_negative_signals(
 
     Args:
         feature_name: Specific feature to analyze, or None for all features
-        end_date: Specific scan date to analyze (YYYYMMDD), or None for all dates
+        start_date: Start date (YYYYMMDD, inclusive), or None for no lower bound
+        end_date: End date (YYYYMMDD, inclusive), or None for no upper bound
         progress_callback: Optional callback for progress updates
 
     Returns:
@@ -506,18 +513,24 @@ def analyze_all_negative_signals(
     # Get stored results based on filters (same logic as track_feature_performance)
     feature_results: dict[str, list[tuple[str, list[str]]]] = {}
 
-    if feature_name and end_date:
-        stored_results = get_feature_result_by_name_and_date(feature_name, end_date)
+    # Determine which query to use based on filters
+    has_date_range = start_date is not None or end_date is not None
+
+    if feature_name and has_date_range:
+        # Feature with date range
+        stored_results = get_feature_results_by_name_and_date_range(feature_name, start_date, end_date)
         if not stored_results:
             return []
         feature_results = {feature_name: stored_results}
     elif feature_name:
+        # Only feature specified (no date filter)
         stored_results = get_feature_results_by_name(feature_name)
         if not stored_results:
             return []
         feature_results = {feature_name: stored_results}
-    elif end_date:
-        all_results = get_feature_results_by_date(end_date)
+    elif has_date_range:
+        # Date range without feature filter
+        all_results = get_all_feature_results_by_date_range(start_date, end_date)
         if not all_results:
             return []
         for fname, scan_date, ts_codes in all_results:
@@ -525,6 +538,7 @@ def analyze_all_negative_signals(
                 feature_results[fname] = []
             feature_results[fname].append((scan_date, ts_codes))
     else:
+        # Neither specified - get all
         all_results = get_all_feature_results()
         if not all_results:
             return []

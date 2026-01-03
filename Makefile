@@ -1,4 +1,4 @@
-.PHONY: install test lint format sync scan backtest track clean help redis-clear redis-clear-feature redis-clear-datahub benchmark
+.PHONY: install test lint format sync scan backtest track feature-eng clean help redis-clear redis-clear-feature redis-clear-datahub benchmark
 
 # Default target
 help:
@@ -13,7 +13,8 @@ help:
 	@echo "  sync                 - Sync all daily bar data"
 	@echo "  scan                 - Scan all symbols for feature signals (requires END_DATE, optional: FEATURE)"
 	@echo "  backtest             - Run yearly backtest for a feature (requires YEAR, FEATURE)"
-	@echo "  track                - Track feature signal performance (optional: END_DATE, FEATURE, ANALYZE)"
+	@echo "  track                - Track feature signal performance (optional: START_DATE, END_DATE, FEATURE, ANALYZE)"
+	@echo "  feature-eng          - Run feature engineering pipeline (optional: FEATURE, STATS, EXPORT)"
 	@echo "  redis-clear          - Clear all Redis cache keys"
 	@echo "  redis-clear-feature  - Clear feature scan cache only"
 	@echo "  redis-clear-datahub  - Clear datahub cache only"
@@ -73,7 +74,11 @@ endif
 
 # Track feature signal performance
 track:
-	uv run python -m src.track.cli $(if $(END_DATE),--end-date $(END_DATE),) $(if $(FEATURE),--feature $(FEATURE),) $(if $(ANALYZE),--analyze,)
+	uv run python -m src.track.cli $(if $(START_DATE),--start-date $(START_DATE),) $(if $(END_DATE),--end-date $(END_DATE),) $(if $(FEATURE),--feature $(FEATURE),) $(if $(ANALYZE),--analyze,)
+
+# Run feature engineering pipeline
+feature-eng:
+	uv run python -m src.feature_engineering.cli $(if $(FEATURE),--feature $(FEATURE),) $(if $(FULL),--full,) $(if $(START_DATE),--start-date $(START_DATE),) $(if $(END_DATE),--end-date $(END_DATE),) $(if $(STATS),--stats,) $(if $(ANALYZE),--analyze,) $(if $(EXPORT),--export $(EXPORT),)
 
 # Clear all Redis cache keys
 redis-clear:

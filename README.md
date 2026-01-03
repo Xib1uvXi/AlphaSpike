@@ -17,6 +17,7 @@ AlphaSpike includes the following built-in feature detectors:
 |---------|-------------|----------|
 | `bbc` | Big Bearish Candle - Gap up followed by large red candle after limit-up day | 1000 days |
 | `volume_upper_shadow` | Volume Upper Shadow - High volume with significant upper shadow | 220 days |
+| `volume_upper_shadow_v2` | Volume Upper Shadow V2 - Optimized version (cross-star + momentum + low position) | 220 days |
 | `volume_stagnation` | Volume Stagnation - High volume but price fails to advance | 550 days |
 | `high_retracement` | High Retracement - Intraday reversal from highs | 1500 days |
 | `consolidation_breakout` | Consolidation Breakout - Volume surge breaking out of tight range | 60 days |
@@ -33,6 +34,20 @@ AlphaSpike includes the following built-in feature detectors:
 - Close > MA5 and Close > MA10
 - MA3 > MA5 (short-term trend confirmation)
 - No limit-up in last 3 days, cumulative gain < 15%
+
+**Volume Upper Shadow V2 (放量上影线优化版)**
+
+Statistically optimized version based on 42,000+ signal analysis. Key insight: the best signals are **cross-star patterns at low positions with prior momentum**, not large bearish candles.
+
+- All conditions from original, plus:
+- body_ratio < 0.20 (cross-star pattern, small real body)
+- gain_2d > 3% (2-day cumulative gain, momentum confirmation)
+- price_quantile < 0.25 (low position, bottom signals)
+
+Performance improvement vs original:
+- All Positive ratio: 40% vs 33% (+7pp)
+- Avg 3D return: +2.31% vs +0.87% (+165%)
+- Signal count: ~1-2/day vs ~17/day (higher precision)
 
 **Volume Stagnation (放量滞涨)**
 - Volume surge: vol > vol_ma10 * 1.5
@@ -337,6 +352,55 @@ The ratio column uses color coding: >30% red, 15-30% yellow, <15% green.
 | bullish_cannon | 2 | 2D | 50.0% | +1.09% | +5.63% (002853.SZ) | -3.45% (301234.SZ) |
 | bullish_cannon | 2 | 3D | 0.0% | -6.28% | -6.28% (301234.SZ) | -6.28% (301234.SZ) |
 
+### Feature Engineering
+
+Extract and analyze feature metrics for ML research:
+
+```bash
+# Run feature engineering pipeline
+make feature-eng FEATURE=volume_upper_shadow
+
+# Full historical scan (all symbols, all dates)
+make feature-eng FEATURE=volume_upper_shadow FULL=1 START_DATE=20240101 END_DATE=20241231
+
+# Show statistics
+make feature-eng FEATURE=volume_upper_shadow STATS=1
+
+# Export to CSV
+make feature-eng FEATURE=volume_upper_shadow EXPORT=output.csv
+```
+
+### Feature Analysis
+
+Analyze feature-return relationships with statistical methods:
+
+```bash
+# Run feature analysis (correlation, binning, significance tests)
+make feature-eng FEATURE=volume_upper_shadow ANALYZE=1
+```
+
+Example output:
+
+```
+             Correlation Matrix (Pearson)
+┏━━━━━━━━━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━━━━┓
+┃ Feature        ┃ 1D Return ┃ 2D Return ┃ 3D Return ┃
+┡━━━━━━━━━━━━━━━━╇━━━━━━━━━━━╇━━━━━━━━━━━╇━━━━━━━━━━━┩
+│ upper_shadow   │   +0.0493 │   +0.0188 │   +0.0086 │
+│ vol_ratio      │   +0.0110 │   +0.0224 │   +0.0247 │
+│ body_ratio     │   -0.0022 │   -0.0140 │   -0.0397 │
+│ gain_2d        │   +0.0334 │   +0.0504 │   +0.0587 │
+└────────────────┴───────────┴───────────┴───────────┘
+
+               body_ratio Bin Analysis
+┏━━━━━┳━━━━━━━┳━━━━━━━━┳━━━━━━━━┳━━━━━━━━┳━━━━━━━━━━━━┓
+┃ Bin ┃ Count ┃ Avg 1D ┃ Avg 2D ┃ Avg 3D ┃ WinRate 1D ┃
+┡━━━━━╇━━━━━━━╇━━━━━━━━╇━━━━━━━━╇━━━━━━━━╇━━━━━━━━━━━━┩
+│ Q1  │  8774 │ +0.51% │ +0.81% │ +1.22% │      54.7% │
+│ Q5  │  8518 │ +0.47% │ +0.58% │ +0.53% │      50.5% │
+└─────┴───────┴────────┴────────┴────────┴────────────┘
+```
+
 ### Clear Cache
 
 ```bash
@@ -422,6 +486,12 @@ src/
 ├── track/               # Performance tracking module
 │   ├── cli.py           # CLI entry point with rich UI
 │   └── tracker.py       # Core tracking logic for signal returns
+├── feature_engineering/ # Feature analysis for ML research
+│   ├── cli.py           # CLI with --stats, --export, --analyze
+│   ├── pipeline.py      # Feature extraction pipeline
+│   ├── extractor.py     # Extract signal metrics
+│   ├── analysis.py      # Correlation, binning, significance tests
+│   └── db.py            # SQLite persistence for feature_data
 ├── common/              # Shared utilities
 │   ├── config.py        # Centralized configuration + feature thresholds
 │   ├── cli_utils.py     # Shared CLI utilities (progress bars, formatting)
@@ -442,6 +512,7 @@ src/
     ├── bbc.py
     ├── bullish_cannon.py
     ├── volume_upper_shadow.py
+    ├── volume_upper_shadow_v2.py  # Optimized version
     ├── volume_stagnation.py
     ├── high_retracement.py
     ├── consolidation_breakout.py
